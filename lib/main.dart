@@ -4,9 +4,9 @@ import 'package:nil_app/firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/movies_provider.dart';
 import 'presentation/providers/shorts_provider.dart';
-// New clean architecture providers
-import 'presentation/providers/video_provider.dart' as clean;
+import 'presentation/providers/video_provider.dart';
 import 'presentation/providers/comment_provider.dart';
+import 'presentation/providers/tmdb_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 
 Future<void> main() async {
@@ -16,12 +16,11 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // Old providers (for existing screens)
         ChangeNotifierProvider(create: (_) => ShortProvider()),
         ChangeNotifierProvider(create: (_) => MovieProvider()),
-        // New clean architecture providers (for refactored video player)
-        ChangeNotifierProvider(create: (_) => clean.VideoProvider()),
+        ChangeNotifierProvider(create: (_) => VideoProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
+        ChangeNotifierProvider(create: (_) => TmdbProvider()),
       ],
       child: const MyApp(),
     ),

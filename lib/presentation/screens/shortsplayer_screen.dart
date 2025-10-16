@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nil_app/data/models/shorts_model.dart';
 import 'package:provider/provider.dart';
 import '../providers/shorts_provider.dart';
-import '../../widgets/action_button.dart';
+import '../widgets/action_button.dart';
 
 class ShortsPlayerScreen extends StatefulWidget {
   final int initialIndex;

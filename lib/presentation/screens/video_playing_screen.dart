@@ -71,7 +71,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
                 // Action Buttons (Like, Dislike, Share, etc.)
                 ActionButtonsWidget(
-                  likes: _videoModel!.likes,
+                  videoId: _videoModel!.id,
+                  initialLikes: _videoModel!.likes,
                   videoTitle: _videoModel!.title,
                   videoUrl: _videoModel!.videoUrl,
                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/shorts_provider.dart';
-import '../../widgets/shorts_csrd.dart';
+import '../widgets/shorts_csrd.dart';
 import 'shortsplayer_screen.dart';
 
 class ShortsListScreen extends StatelessWidget {

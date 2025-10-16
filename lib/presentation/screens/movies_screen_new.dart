@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/tmdb_provider.dart';
 import '../../data/models/movie_tmdb_model.dart';
 import 'movie_details_screen.dart';
-import 'movie_search_screen.dart';
 
 class MoviesScreen extends StatefulWidget {
   const MoviesScreen({super.key});
@@ -17,9 +16,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TmdbProvider>().loadAllMovies();
-    });
+    Future.microtask(() => context.read<TmdbProvider>().loadAllMovies());
   }
 
   @override
@@ -39,12 +36,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MovieSearchScreen(),
-                ),
-              );
+              // TODO: Add search functionality
             },
           ),
         ],
@@ -59,34 +51,30 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
           if (provider.error != null) {
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Error loading movies',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading movies',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    provider.error!,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => provider.loadAllMovies(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Please check:\n1. Internet connection\n2. TMDB API key is correct\n3. Wait a few minutes if key is new',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => provider.loadAllMovies(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             );
           }
@@ -154,17 +142,17 @@ class _MoviesScreenState extends State<MoviesScreen> {
           // Gradient Overlay
           Container(
             height: 500,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7),
-                          Colors.black,
-                        ],
-                      ),
-                    ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.7),
+                  Colors.black,
+                ],
+              ),
+            ),
           ),
 
           // Movie Info
@@ -287,38 +275,60 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   Widget _buildMovieCard(MovieTmdb movie, {bool isLarge = false}) {
     final width = isLarge ? 180.0 : 140.0;
-    final height = isLarge ? 260.0 : 200.0;
+    final height = isLarge ? 270.0 : 210.0;
 
     return GestureDetector(
       onTap: () => _navigateToDetails(movie),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         width: width,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: movie.posterUrl,
-            height: height,
-            width: width,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              height: height,
-              width: width,
-              color: Colors.grey[900],
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.red,
-                  strokeWidth: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: movie.posterUrl,
+                height: height,
+                width: width,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  height: height,
+                  width: width,
+                  color: Colors.grey[900],
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.red,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: height,
+                  width: width,
+                  color: Colors.grey[900],
+                  child: const Icon(Icons.movie, color: Colors.grey, size: 50),
                 ),
               ),
             ),
-            errorWidget: (context, url, error) => Container(
-              height: height,
-              width: width,
-              color: Colors.grey[900],
-              child: const Icon(Icons.movie, color: Colors.grey, size: 50),
-            ),
-          ),
+            if (isLarge) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    movie.voteAverage.toStringAsFixed(1),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );

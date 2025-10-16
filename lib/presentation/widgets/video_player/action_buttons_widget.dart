@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/format_helper.dart';
 import '../../providers/video_provider.dart';
 
 class ActionButtonsWidget extends StatelessWidget {
-  final int likes;
+  final String videoId;
+  final int initialLikes;
   final String videoTitle;
   final String videoUrl;
 
   const ActionButtonsWidget({
     super.key,
-    required this.likes,
+    required this.videoId,
+    required this.initialLikes,
     required this.videoTitle,
     required this.videoUrl,
   });
@@ -25,13 +28,25 @@ class ActionButtonsWidget extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            Consumer<VideoProvider>(
-              builder: (context, provider, child) {
-                return _ActionButton(
-                  icon: provider.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  label: FormatHelper.formatCount(likes),
-                  onTap: () => provider.toggleLike(),
-                  isActive: provider.isLiked,
+            // Like Button with Real-time Count
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection(AppConstants.videosCollection)
+                  .doc(videoId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data() as Map<String, dynamic>?;
+                final currentLikes = data?['likes'] ?? initialLikes;
+                
+                return Consumer<VideoProvider>(
+                  builder: (context, provider, child) {
+                    return _ActionButton(
+                      icon: provider.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                      label: FormatHelper.formatCount(currentLikes),
+                      onTap: () => provider.toggleLike(),
+                      isActive: provider.isLiked,
+                    );
+                  },
                 );
               },
             ),
