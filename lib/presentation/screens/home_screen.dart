@@ -6,8 +6,23 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'video_playing_screen.dart';
 
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,40 +31,70 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Row(
-          children: [
-            Icon(Icons.play_circle_filled, color: Colors.red, size: 32),
-            const SizedBox(width: 8),
-            const Text(
-              'NilStream',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  hintText: 'Search videos...',
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              )
+            : Row(
+                children: [
+                  Icon(Icons.play_circle_filled, color: Colors.red, size: 32),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'NilStream',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                  ),
+                ],
               ),
+        actions: [
+          if (!_isSearching) ...[
+            IconButton(
+              icon: const Icon(Icons.cast, color: Colors.black),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.black),
+              onPressed: () {},
             ),
           ],
-        ),
-        actions: [
           IconButton(
-            icon: const Icon(Icons.cast, color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=1'),
+            icon: Icon(
+              _isSearching ? Icons.close : Icons.search,
+              color: Colors.black,
             ),
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                  _searchQuery = '';
+                }
+              });
+            },
           ),
+          if (!_isSearching)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=1'),
+              ),
+            ),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -59,7 +104,7 @@ class HomeScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Colors.red));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -78,12 +123,41 @@ class HomeScreen extends StatelessWidget {
             );
           }
 
-          final videos = snapshot.data!.docs;
+          final allVideos = snapshot.data!.docs;
+
+          // Filter videos based on search query
+          final filteredVideos = _searchQuery.isEmpty
+              ? allVideos
+              : allVideos.where((video) {
+                  final data = video.data() as Map<String, dynamic>;
+                  final title = (data['title'] ?? '').toString().toLowerCase();
+                  final channelName =
+                      (data['channelName'] ?? '').toString().toLowerCase();
+                  return title.contains(_searchQuery) ||
+                      channelName.contains(_searchQuery);
+                }).toList();
+
+          if (filteredVideos.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No videos found for "$_searchQuery"',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
 
           return ListView.builder(
-            itemCount: videos.length,
+            itemCount: filteredVideos.length,
             itemBuilder: (context, index) {
-              return VideoCard(video: videos[index]);
+              return VideoCard(video: filteredVideos[index]);
             },
           );
         },
