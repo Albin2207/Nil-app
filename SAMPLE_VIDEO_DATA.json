@@ -1,0 +1,91 @@
+{
+  "note": "Copy and paste these sample videos into your Firebase Firestore manually. Replace URLs with your actual Cloudinary URLs.",
+  "sample_videos": [
+    {
+      "title": "Amazing Nature Documentary - Wildlife in 4K",
+      "description": "Explore the beauty of nature with this stunning 4K documentary. Watch as we journey through forests, mountains, and oceans to discover incredible wildlife. This video showcases the natural world in all its glory.\n\nChapters:\n0:00 - Introduction\n2:30 - Forest Wildlife\n5:45 - Mountain Peaks\n8:20 - Ocean Life\n\n#nature #documentary #wildlife #4k",
+      "videoUrl": "YOUR_CLOUDINARY_VIDEO_URL_HERE",
+      "thumbnailUrl": "YOUR_CLOUDINARY_THUMBNAIL_URL_HERE",
+      "channelName": "Nature Explorer",
+      "channelAvatar": "https://i.pravatar.cc/150?img=12",
+      "duration": 600,
+      "views": 0,
+      "likes": 0,
+      "dislikes": 0,
+      "subscribers": 125000
+    },
+    {
+      "title": "Flutter Tutorial for Beginners - Build Your First App",
+      "description": "Learn Flutter from scratch! In this comprehensive tutorial, we'll build a complete mobile app together. Perfect for beginners who want to get started with Flutter development.\n\nWhat you'll learn:\n✅ Flutter basics\n✅ Widget structure\n✅ State management\n✅ Building UI\n✅ Firebase integration\n\nCode available on GitHub!\n\n#flutter #tutorial #coding #mobile",
+      "videoUrl": "YOUR_CLOUDINARY_VIDEO_URL_HERE",
+      "thumbnailUrl": "YOUR_CLOUDINARY_THUMBNAIL_URL_HERE",
+      "channelName": "Code Academy",
+      "channelAvatar": "https://i.pravatar.cc/150?img=8",
+      "duration": 1245,
+      "views": 0,
+      "likes": 0,
+      "dislikes": 0,
+      "subscribers": 450000
+    },
+    {
+      "title": "Cooking Masterclass: Italian Pasta from Scratch",
+      "description": "Join me in the kitchen as we make authentic Italian pasta from scratch! Learn the traditional techniques passed down through generations.\n\nIngredients:\n- 2 cups flour\n- 3 eggs\n- Pinch of salt\n- Olive oil\n\nTime stamps:\n0:00 - Intro\n1:20 - Making the dough\n5:30 - Rolling pasta\n9:15 - Cooking tips\n12:40 - Final presentation\n\n#cooking #pasta #italian #recipe",
+      "videoUrl": "YOUR_CLOUDINARY_VIDEO_URL_HERE",
+      "thumbnailUrl": "YOUR_CLOUDINARY_THUMBNAIL_URL_HERE",
+      "channelName": "Chef's Kitchen",
+      "channelAvatar": "https://i.pravatar.cc/150?img=5",
+      "duration": 856,
+      "views": 0,
+      "likes": 0,
+      "dislikes": 0,
+      "subscribers": 890000
+    },
+    {
+      "title": "Top 10 Travel Destinations for 2025",
+      "description": "Planning your next vacation? Here are the top 10 must-visit destinations for 2025! From tropical beaches to historic cities, we've got you covered.\n\n10. Bali, Indonesia\n9. Iceland\n8. Tokyo, Japan\n7. Santorini, Greece\n6. New Zealand\n5. Peru\n4. Norway\n3. Switzerland\n2. Maldives\n1. Italy\n\nWhich one would you visit first? Let us know in the comments!\n\n#travel #vacation #destinations #2025",
+      "videoUrl": "YOUR_CLOUDINARY_VIDEO_URL_HERE",
+      "thumbnailUrl": "YOUR_CLOUDINARY_THUMBNAIL_URL_HERE",
+      "channelName": "Travel Diaries",
+      "channelAvatar": "https://i.pravatar.cc/150?img=15",
+      "duration": 723,
+      "views": 0,
+      "likes": 0,
+      "dislikes": 0,
+      "subscribers": 2100000
+    },
+    {
+      "title": "Fitness Routine - 30 Min Full Body Workout at Home",
+      "description": "Get fit at home with this 30-minute full body workout! No equipment needed. Perfect for all fitness levels.\n\nWorkout breakdown:\n- 5 min warmup\n- 20 min main workout\n- 5 min cooldown and stretching\n\nExercises included:\n• Push-ups\n• Squats\n• Lunges\n• Planks\n• Burpees\n• Mountain climbers\n\nRemember to stay hydrated and listen to your body!\n\n#fitness #workout #homeworkout #exercise",
+      "videoUrl": "YOUR_CLOUDINARY_VIDEO_URL_HERE",
+      "thumbnailUrl": "YOUR_CLOUDINARY_THUMBNAIL_URL_HERE",
+      "channelName": "Fitness Pro",
+      "channelAvatar": "https://i.pravatar.cc/150?img=20",
+      "duration": 1800,
+      "views": 0,
+      "likes": 0,
+      "dislikes": 0,
+      "subscribers": 750000
+    }
+  ],
+  "instructions": [
+    "1. Upload your video to Cloudinary",
+    "2. Get the video URL from Cloudinary",
+    "3. Get the thumbnail URL (or use Cloudinary auto-generated thumbnail)",
+    "4. Calculate video duration in seconds",
+    "5. Go to Firebase Console > Firestore Database",
+    "6. Click on 'videos' collection (create if doesn't exist)",
+    "7. Click 'Add Document'",
+    "8. Copy the fields from above and paste values",
+    "9. IMPORTANT: Make sure duration, views, likes, dislikes, subscribers are NUMBER type",
+    "10. For timestamp, use the server timestamp (clock icon in Firebase Console)",
+    "11. Click 'Save'",
+    "12. Repeat for each video you want to add"
+  ],
+  "quick_test_urls": {
+    "note": "You can use these free public video URLs for quick testing:",
+    "test_video_1": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    "test_video_2": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    "test_video_3": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+  }
+}
+

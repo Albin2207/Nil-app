@@ -1,0 +1,23 @@
+rules_version='2'
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Videos collection - anyone can read, but you need to be authenticated to write
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if true; // Change this to require authentication later
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if true; // Anyone can comment for now
+        allow update, delete: if true; // Change this based on your auth rules
+      }
+    }
+    
+    // Allow other collections
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 11, 14);
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "245384420905",
+    "firebase_url": "https://nilstream-default-rtdb.firebaseio.com",
+    "project_id": "nilstream",
+    "storage_bucket": "nilstream.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245384420905:android:12b0e44b24dc5e526e4638",
+        "android_client_info": {
+          "package_name": "com.example.nil_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDppsuabFvFz5Ki70V0Ctu2kq5fE370w1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
