@@ -2,7 +2,7 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Videos collection - anyone can read, but you need to be authenticated to write
+    // Videos collection
     match /videos/{videoId} {
       allow read: if true;
       allow write: if true; // Change this to require authentication later
@@ -10,9 +10,15 @@ service cloud.firestore {
       // Comments subcollection
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if true; // Anyone can comment for now
-        allow update, delete: if true; // Change this based on your auth rules
+        allow create: if true;
+        allow update, delete: if true;
       }
+    }
+    
+    // Shorts collection
+    match /shorts/{shortId} {
+      allow read: if true;
+      allow write: if true; // Change this to require authentication later
     }
     
     // Allow other collections

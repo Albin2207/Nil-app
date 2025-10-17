@@ -4,7 +4,7 @@ import 'movies_screen.dart';
 import 'create_screen.dart';
 import 'downloads_screen.dart';
 import 'profile_screen.dart';
-import 'shortsplayer_screen.dart';
+import 'shorts_screen_new.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -52,7 +52,7 @@ class _MainScreenState extends State<MainScreen> {
         physics: const NeverScrollableScrollPhysics(),
         children: const [
           HomeScreen(),
-          ShortsPlayerScreen(initialIndex: 0),
+          ShortsScreen(),
           MoviesScreen(),
           CreateScreen(),
           DownloadsScreen(),

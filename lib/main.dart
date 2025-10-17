@@ -4,6 +4,7 @@ import 'package:nil_app/firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/movies_provider.dart';
 import 'presentation/providers/shorts_provider.dart';
+import 'presentation/providers/shorts_provider_new.dart';
 import 'presentation/providers/video_provider.dart';
 import 'presentation/providers/comment_provider.dart';
 import 'presentation/providers/tmdb_provider.dart';
@@ -17,6 +18,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ShortProvider()),
+        ChangeNotifierProvider(create: (_) => ShortsProviderNew()),
         ChangeNotifierProvider(create: (_) => MovieProvider()),
         ChangeNotifierProvider(create: (_) => VideoProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
