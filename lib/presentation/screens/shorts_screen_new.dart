@@ -4,7 +4,10 @@ import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../data/models/short_video_model.dart';
 import '../providers/shorts_provider_new.dart';
+import '../providers/download_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../../core/utils/format_helper.dart';
+import '../widgets/shorts/short_comments_sheet.dart';
 
 class ShortsScreen extends StatefulWidget {
   const ShortsScreen({super.key});
@@ -223,6 +226,30 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     });
   }
 
+  void _openCommentsSheet(BuildContext context) {
+    // Pause video when opening comments
+    if (_controller.value.isPlaying) {
+      _controller.pause();
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ShortCommentsSheet(
+        shortId: widget.short.id,
+        commentsCount: widget.short.commentsCount,
+      ),
+    ).then((_) {
+      // Resume video when closing comments (only if this is the current page)
+      if (widget.isCurrentPage && mounted) {
+        _controller.play();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -351,11 +378,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                   context,
                   Icons.comment_outlined,
                   FormatHelper.formatCount(widget.short.commentsCount),
-                  () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Comments coming soon!')),
-                    );
-                  },
+                  () => _openCommentsSheet(context),
                 ),
                 const SizedBox(height: 24),
                 _buildActionButton(
@@ -368,6 +391,42 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                       subject: widget.short.title,
                     );
                   },
+                ),
+                const SizedBox(height: 24),
+                // Download button
+                Consumer<DownloadProvider>(
+                  builder: (context, downloadProvider, child) {
+                    return FutureBuilder<bool>(
+                      future: downloadProvider.isVideoDownloaded(widget.short.id),
+                      builder: (context, snapshot) {
+                        final isDownloaded = snapshot.data ?? false;
+                        return _buildActionButton(
+                          context,
+                          isDownloaded ? Icons.download_done : Icons.download_outlined,
+                          isDownloaded ? 'Saved' : 'Save',
+                          isDownloaded
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Already downloaded'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              : () => _showShortQualityPicker(context),
+                          isActive: isDownloaded,
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                // Save to playlist button
+                _buildActionButton(
+                  context,
+                  Icons.playlist_add,
+                  'Playlist',
+                  () => _showShortPlaylistPicker(context),
                 ),
                 const SizedBox(height: 24),
                 // Channel Avatar
@@ -491,6 +550,200 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showShortQualityPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Download Quality',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+            _QualityTile('360p', 'Small (~10 MB)', () => _startShortDownload(context, '360p')),
+            _QualityTile('720p', 'Medium (~25 MB)', () => _startShortDownload(context, '720p'), recommended: true),
+            _QualityTile('1080p', 'Large (~50 MB)', () => _startShortDownload(context, '1080p')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startShortDownload(BuildContext context, String quality) async {
+    Navigator.pop(context);
+    
+    final downloadProvider = context.read<DownloadProvider>();
+    if (await downloadProvider.isVideoDownloaded(widget.short.id)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Already downloaded'), backgroundColor: Colors.orange),
+        );
+      }
+      return;
+    }
+
+    final success = await downloadProvider.downloadVideo(
+      videoId: widget.short.id,
+      videoUrl: widget.short.videoUrl,
+      title: widget.short.title,
+      thumbnailUrl: widget.short.thumbnailUrl,
+      quality: quality,
+      isShort: true,
+      channelName: widget.short.channelName,
+      description: widget.short.description,
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Download complete!' : 'Download failed'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showShortPlaylistPicker(BuildContext context) async {
+    final playlistProvider = context.read<PlaylistProvider>();
+    await playlistProvider.loadPlaylists();
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Save to Playlist',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            Consumer<PlaylistProvider>(
+              builder: (context, provider, child) {
+                if (provider.playlists.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'No playlists yet.\nCreate one in Library tab.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: provider.playlists.length,
+                  itemBuilder: (context, index) {
+                    final playlist = provider.playlists[index];
+                    final isInPlaylist = playlist.videoIds.contains(widget.short.id);
+                    
+                    return ListTile(
+                      leading: Icon(
+                        Icons.playlist_play,
+                        color: isInPlaylist ? Colors.red : Colors.grey,
+                      ),
+                      title: Text(
+                        playlist.name,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: isInPlaylist
+                          ? const Icon(Icons.check, color: Colors.green)
+                          : null,
+                      onTap: () async {
+                        if (isInPlaylist) {
+                          await provider.removeVideoFromPlaylist(playlist.id, widget.short.id);
+                        } else {
+                          await provider.addVideoToPlaylist(playlist.id, widget.short.id);
+                        }
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isInPlaylist ? 'Removed from playlist' : 'Added to playlist'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QualityTile extends StatelessWidget {
+  final String quality;
+  final String size;
+  final VoidCallback onTap;
+  final bool recommended;
+
+  const _QualityTile(this.quality, this.size, this.onTap, {this.recommended = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: recommended ? Colors.red : Colors.grey, width: recommended ? 2 : 1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.high_quality, color: recommended ? Colors.red : Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(quality, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: recommended ? Colors.red : Colors.white)),
+                      if (recommended) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                          child: const Text('Recommended', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(size, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+          ],
+        ),
+      ),
     );
   }
 }

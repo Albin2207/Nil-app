@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../providers/comment_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'comment_item_widget.dart';
 import 'reply_dialog.dart';
 
@@ -20,21 +21,40 @@ class CommentsBottomSheet extends StatefulWidget {
 
 class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _textFieldFocusNode = FocusNode();
 
   @override
   void dispose() {
     _commentController.dispose();
+    _textFieldFocusNode.dispose();
     super.dispose();
   }
 
-  void _postComment() {
-    final provider = context.read<CommentProvider>();
-    provider.postComment(
+  Future<void> _postComment() async {
+    if (_commentController.text.trim().isEmpty) return;
+    
+    final commentText = _commentController.text;
+    final commentProvider = context.read<CommentProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.firebaseUser;
+    
+    // Use Firebase Auth data directly (always available)
+    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Anonymous User';
+    final userAvatar = user?.photoURL ?? 'https://ui-avatars.com/api/?name=$userName&background=random';
+    
+    // Post comment first
+    await commentProvider.postComment(
       videoId: widget.videoId,
-      text: _commentController.text,
+      text: commentText,
+      userId: user?.uid,
+      userName: userName,
+      userAvatar: userAvatar,
     );
+    
+    // THEN clear and dismiss keyboard
     _commentController.clear();
-    FocusScope.of(context).unfocus();
+    _textFieldFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
   void _showReplyDialog(String parentId, String username) {
@@ -46,6 +66,35 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
         username: username,
       ),
     );
+  }
+
+  Future<void> _deleteComment(CommentProvider provider, String commentId) async {
+    // Completely remove focus from all text fields
+    FocusManager.instance.primaryFocus?.unfocus();
+    _commentController.clear();
+    
+    try {
+      await provider.deleteComment(widget.videoId, commentId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Comment deleted'),
+            duration: Duration(seconds: 1),
+            backgroundColor: Colors.black87,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting comment: $e'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -111,50 +160,60 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
               // Add Comment Section
               Padding(
                 padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 18,
-                      backgroundImage: NetworkImage(AppConstants.defaultUserAvatar),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _commentController,
-                        style: const TextStyle(
-                          color: AppConstants.textPrimaryColor,
-                          fontSize: 14,
+                child: Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    final user = authProvider.firebaseUser;
+                    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'User';
+                    final userAvatar = user?.photoURL ?? 'https://ui-avatars.com/api/?name=$userName&background=random';
+                    
+                    return Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: NetworkImage(userAvatar),
+                          backgroundColor: Colors.grey[300],
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Add a comment...',
-                          hintStyle: TextStyle(color: Colors.grey[500]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(
-                                color: AppConstants.primaryColor, width: 2),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.send,
-                                color: AppConstants.primaryColor),
-                            onPressed: _postComment,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _commentController,
+                            focusNode: _textFieldFocusNode,
+                            style: const TextStyle(
+                              color: AppConstants.textPrimaryColor,
+                              fontSize: 14,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Add a comment...',
+                              hintStyle: TextStyle(color: Colors.grey[500]),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(color: Colors.grey[300]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(color: Colors.grey[300]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(
+                                    color: AppConstants.primaryColor, width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.send,
+                                    color: AppConstants.primaryColor),
+                                onPressed: _postComment,
+                              ),
+                            ),
+                            onSubmitted: (_) => _postComment(),
                           ),
                         ),
-                        onSubmitted: (_) => _postComment(),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
 
@@ -194,10 +253,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 CommentItemWidget(
+                                  key: ValueKey(comment.id),
                                   videoId: widget.videoId,
                                   comment: comment,
-                                  onReplyTap: () => _showReplyDialog(
-                                      comment.id, comment.username),
+                                  onReplyTap: () async {
+                                    FocusManager.instance.primaryFocus?.unfocus();
+                                    await Future.delayed(const Duration(milliseconds: 200));
+                                    if (context.mounted) {
+                                      _showReplyDialog(comment.id, comment.username);
+                                    }
+                                  },
+                                  onDeleteTap: () async {
+                                    // Ensure keyboard is completely dismissed
+                                    _textFieldFocusNode.unfocus();
+                                    FocusManager.instance.primaryFocus?.unfocus();
+                                    _commentController.clear();
+                                    // Wait for everything to settle
+                                    await Future.delayed(const Duration(milliseconds: 100));
+                                    if (context.mounted) {
+                                      await _deleteComment(provider, comment.id);
+                                    }
+                                  },
                                 ),
                                 // Show replies
                                 ...provider
@@ -205,9 +281,21 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                                     .map((reply) => Padding(
                                           padding: const EdgeInsets.only(left: 48),
                                           child: CommentItemWidget(
+                                            key: ValueKey(reply.id),
                                             videoId: widget.videoId,
                                             comment: reply,
                                             isReply: true,
+                                            onDeleteTap: () async {
+                                              // Ensure keyboard is completely dismissed
+                                              _textFieldFocusNode.unfocus();
+                                              FocusManager.instance.primaryFocus?.unfocus();
+                                              _commentController.clear();
+                                              // Wait for everything to settle
+                                              await Future.delayed(const Duration(milliseconds: 100));
+                                              if (context.mounted) {
+                                                await _deleteComment(provider, reply.id);
+                                              }
+                                            },
                                           ),
                                         )),
                               ],

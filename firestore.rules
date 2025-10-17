@@ -2,28 +2,71 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles
+      allow read: if true;
+      // Only authenticated users can create their own profile
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Only the user can update/delete their own profile
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Videos collection
     match /videos/{videoId} {
+      // Anyone can read videos
       allow read: if true;
-      allow write: if true; // Change this to require authentication later
+      // Allow anyone to create (supports both manual & user uploads)
+      allow create: if true;
+      // Allow anyone to update (for likes, views, comments count)
+      allow update: if true;
+      // Delete: Only owner if uploadedBy exists, otherwise any auth user can manage
+      allow delete: if request.auth != null && 
+        (!resource.data.keys().hasAny(['uploadedBy']) || 
+         request.auth.uid == resource.data.uploadedBy);
       
       // Comments subcollection
       match /comments/{commentId} {
+        // Anyone can read comments
         allow read: if true;
+        // Anyone can create comments
         allow create: if true;
-        allow update, delete: if true;
+        // Anyone can update (for likes/dislikes)
+        allow update: if true;
+        // Delete: Only owner if userId exists, otherwise any auth user
+        allow delete: if request.auth != null && 
+          (!resource.data.keys().hasAny(['userId']) || 
+           request.auth.uid == resource.data.userId);
       }
     }
     
     // Shorts collection
     match /shorts/{shortId} {
+      // Anyone can read shorts
       allow read: if true;
-      allow write: if true; // Change this to require authentication later
-    }
-    
-    // Allow other collections
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 11, 14);
+      // Allow anyone to create (supports both manual & user uploads)
+      allow create: if true;
+      // Allow anyone to update (for likes, views, comments count)
+      allow update: if true;
+      // Delete: Only owner if uploadedBy exists, otherwise any auth user can manage
+      allow delete: if request.auth != null && 
+        (!resource.data.keys().hasAny(['uploadedBy']) || 
+         request.auth.uid == resource.data.uploadedBy);
+      
+      // Shorts comments subcollection
+      match /comments/{commentId} {
+        // Anyone can read comments
+        allow read: if true;
+        // Anyone can create comments
+        allow create: if true;
+        // Anyone can update (for likes/dislikes)
+        allow update: if true;
+        // Delete: Only owner if userId exists, otherwise any auth user
+        allow delete: if request.auth != null && 
+          (!resource.data.keys().hasAny(['userId']) || 
+           request.auth.uid == resource.data.userId);
+      }
     }
   }
 }

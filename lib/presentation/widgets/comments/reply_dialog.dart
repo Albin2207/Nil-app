@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../providers/comment_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ReplyDialog extends StatefulWidget {
   final String videoId;
@@ -31,11 +32,21 @@ class _ReplyDialogState extends State<ReplyDialog> {
   void _submitReply() {
     if (_replyController.text.trim().isEmpty) return;
 
-    final provider = context.read<CommentProvider>();
-    provider.postComment(
+    final commentProvider = context.read<CommentProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.firebaseUser;
+    
+    // Use Firebase Auth data directly (always available)
+    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Anonymous User';
+      final userAvatar = user?.photoURL ?? 'https://ui-avatars.com/api/?name=$userName&background=random';
+    
+    commentProvider.postComment(
       videoId: widget.videoId,
       text: _replyController.text,
       parentId: widget.parentId,
+      userId: user?.uid,
+      userName: userName,
+      userAvatar: userAvatar,
     );
 
     Navigator.pop(context);

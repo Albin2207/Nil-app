@@ -10,6 +10,7 @@ class CommentItemWidget extends StatelessWidget {
   final CommentModel comment;
   final bool isReply;
   final VoidCallback? onReplyTap;
+  final VoidCallback? onDeleteTap;
 
   const CommentItemWidget({
     super.key,
@@ -17,6 +18,7 @@ class CommentItemWidget extends StatelessWidget {
     required this.comment,
     this.isReply = false,
     this.onReplyTap,
+    this.onDeleteTap,
   });
 
   @override
@@ -63,6 +65,27 @@ class CommentItemWidget extends StatelessWidget {
                             color: AppConstants.textSecondaryColor,
                           ),
                         ),
+                        const Spacer(),
+                        if (onDeleteTap != null)
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: Colors.red.withValues(alpha: 0.7),
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () async {
+                              // Ensure keyboard is dismissed
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              FocusScope.of(context).unfocus();
+                              // Small delay to ensure focus is cleared
+                              await Future.delayed(const Duration(milliseconds: 100));
+                              if (context.mounted) {
+                                _showDeleteDialog(context);
+                              }
+                            },
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -70,7 +93,7 @@ class CommentItemWidget extends StatelessWidget {
                       comment.text,
                       style: TextStyle(
                         fontSize: isReply ? 13 : 14,
-                        color: AppConstants.textPrimaryColor.withOpacity(0.87),
+                        color: AppConstants.textPrimaryColor.withValues(alpha: 0.87),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -160,6 +183,57 @@ class CommentItemWidget extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return WillPopScope(
+          onWillPop: () async {
+            FocusManager.instance.primaryFocus?.unfocus();
+            return true;
+          },
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text(
+              'Delete comment?',
+              style: TextStyle(color: Colors.black, fontSize: 18),
+            ),
+            content: const Text(
+              'Are you sure you want to delete this comment? This action cannot be undone.',
+              style: TextStyle(color: Colors.black87, fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.of(dialogContext).pop();
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  if (onDeleteTap != null) {
+                    onDeleteTap!();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
               ),
             ],
           ),

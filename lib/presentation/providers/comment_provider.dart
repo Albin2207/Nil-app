@@ -17,6 +17,9 @@ class CommentProvider extends ChangeNotifier {
     required String videoId,
     required String text,
     String? parentId,
+    String? userId,
+    String? userName,
+    String? userAvatar,
   }) async {
     if (text.trim().isEmpty) return;
 
@@ -26,8 +29,9 @@ class CommentProvider extends ChangeNotifier {
         .collection('comments')
         .add({
       'text': text.trim(),
-      'username': 'Anonymous User', // TODO: Replace with actual user
-      'userAvatar': 'https://i.pravatar.cc/150?img=1',
+      'username': userName ?? 'Anonymous User',
+      'userAvatar': userAvatar ?? 'https://i.pravatar.cc/150?img=1',
+      'userId': userId,
       'timestamp': FieldValue.serverTimestamp(),
       'likes': 0,
       'dislikes': 0,
@@ -115,6 +119,32 @@ class CommentProvider extends ChangeNotifier {
     return allComments
         .where((comment) => comment.parentId == parentId)
         .toList();
+  }
+
+  // Delete a comment
+  Future<void> deleteComment(String videoId, String commentId) async {
+    try {
+      await _firestore
+          .collection('videos')
+          .doc(videoId)
+          .collection('comments')
+          .doc(commentId)
+          .delete();
+
+      // Update video comment count
+      await _firestore.collection('videos').doc(videoId).update({
+        'commentsCount': FieldValue.increment(-1),
+      });
+
+      // Remove from local cache
+      _commentLikes.remove(commentId);
+      _commentDislikes.remove(commentId);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error deleting comment: $e');
+      rethrow;
+    }
   }
 }
 

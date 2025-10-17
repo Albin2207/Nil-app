@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.play_circle_filled, color: Colors.red, size: 32),
                   const SizedBox(width: 8),
                   const Text(
-                    'NilStream',
+                    'NIL',
                     style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,

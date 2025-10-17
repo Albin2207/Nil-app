@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'onboarding_screen.dart';
+import 'login_screen.dart';
 import 'main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,19 +44,52 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Navigate to main screen after 3 seconds
+    // Navigate after 3 seconds with auth checks
     Timer(const Duration(seconds: 3), () {
+      _checkAppState();
+    });
+  }
+
+  Future<void> _checkAppState() async {
+    if (!mounted) return;
+
+    final authProvider = context.read<AuthProvider>();
+
+    // Check 1: Has completed onboarding?
+    final hasSeenOnboarding = await authProvider.hasCompletedOnboarding();
+
+    if (!hasSeenOnboarding) {
+      // First time user - show onboarding
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const OnboardingScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Check 2: Is user logged in?
+    final isLoggedIn = authProvider.isAuthenticated;
+
+    if (mounted) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const MainScreen(), // Replace with your main screen
+              isLoggedIn ? const MainScreen() : const LoginScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 500),
         ),
       );
-    });
+    }
   }
 
   @override
@@ -71,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: RadialGradient(
             center: Alignment.center,
             radius: 1.0,
-            colors: [const Color(0xFF1a1a2e), Colors.white],
+            colors: [const Color(0xFF1a1a2e), Colors.black],
           ),
         ),
         child: Center(
@@ -86,7 +122,7 @@ class _SplashScreenState extends State<SplashScreen>
                   Container(
                     width: 230,
                     height: 230,
-                    decoration: BoxDecoration(shape: BoxShape.circle),
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
                     child: ClipOval(
                       child: Image.asset(
                         'assets/nil_app_icon-removebg-preview.png',
@@ -94,17 +130,17 @@ class _SplashScreenState extends State<SplashScreen>
                         errorBuilder: (context, error, stackTrace) {
                           // Fallback gradient circle if image not found
                           return Container(
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  const Color(0xFF00d4ff),
-                                  const Color(0xFF0099ff),
-                                  const Color(0xFF7b2cbf),
-                                  const Color(0xFFff006e),
-                                  const Color(0xFFff7b00),
+                                  Color(0xFF00d4ff),
+                                  Color(0xFF0099ff),
+                                  Color(0xFF7b2cbf),
+                                  Color(0xFFff006e),
+                                  Color(0xFFff7b00),
                                 ],
                               ),
                             ),
@@ -147,8 +183,7 @@ class _SplashScreenState extends State<SplashScreen>
                       fontSize: 14,
                       fontWeight: FontWeight.w300,
                       letterSpacing: 2,
-                      // ignore: deprecated_member_use
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 60),
@@ -159,8 +194,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        // ignore: deprecated_member_use
-                        Colors.white.withOpacity(0.3),
+                        Colors.white.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
