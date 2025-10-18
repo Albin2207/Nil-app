@@ -38,15 +38,24 @@ class DownloadRepository {
       final filePath = '${videoDir.path}/$fileName';
 
       // Download with progress
+      print('🔽 Starting download: $title');
+      print('📍 URL: $videoUrl');
+      
       await _dio.download(
         videoUrl,
         filePath,
         onReceiveProgress: (received, total) {
           if (total != -1) {
-            onProgress(received / total);
+            final progress = received / total;
+            print('📊 Download progress: ${(progress * 100).toStringAsFixed(1)}% ($received / $total bytes)');
+            onProgress(progress);
+          } else {
+            print('⚠️ Total size unknown, received: $received bytes');
           }
         },
       );
+      
+      print('✅ Download completed: $title');
 
       // Get file size
       final file = File(filePath);

@@ -198,6 +198,15 @@ class _CreateScreenState extends State<CreateScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Upload Type Selector
+                const Text(
+                  'Upload Type',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -210,11 +219,20 @@ class _CreateScreenState extends State<CreateScreen> {
                           }
                         },
                         selectedColor: Colors.red,
+                        backgroundColor: Colors.grey[200],
+                        side: BorderSide(
+                          color: _uploadType == UploadType.video 
+                              ? Colors.red 
+                              : Colors.grey[400]!,
+                          width: 2,
+                        ),
                         labelStyle: TextStyle(
                           color: _uploadType == UploadType.video
                               ? Colors.white
                               : Colors.black,
+                          fontWeight: FontWeight.w600,
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -228,11 +246,20 @@ class _CreateScreenState extends State<CreateScreen> {
                           }
                         },
                         selectedColor: Colors.red,
+                        backgroundColor: Colors.grey[200],
+                        side: BorderSide(
+                          color: _uploadType == UploadType.short 
+                              ? Colors.red 
+                              : Colors.grey[400]!,
+                          width: 2,
+                        ),
                         labelStyle: TextStyle(
                           color: _uploadType == UploadType.short
                               ? Colors.white
                               : Colors.black,
+                          fontWeight: FontWeight.w600,
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                   ],

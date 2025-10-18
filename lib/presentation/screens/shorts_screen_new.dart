@@ -592,6 +592,11 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
       return;
     }
 
+    // Show downloading progress dialog
+    if (context.mounted) {
+      _showDownloadProgressDialog(context, quality);
+    }
+
     final success = await downloadProvider.downloadVideo(
       videoId: widget.short.id,
       videoUrl: widget.short.videoUrl,
@@ -604,13 +609,152 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     );
 
     if (context.mounted) {
+      Navigator.pop(context); // Close progress dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Download complete!' : 'Download failed'),
+          content: Row(
+            children: [
+              Icon(
+                success ? Icons.check_circle : Icons.error,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Text(success ? 'Download complete!' : 'Download failed'),
+            ],
+          ),
           backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
+  }
+
+  void _showDownloadProgressDialog(BuildContext context, String quality) {
+    bool wasDownloading = true; // Track if download was in progress
+    bool dialogClosed = false; // Prevent multiple close attempts
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => false,
+        child: Consumer<DownloadProvider>(
+          builder: (context, provider, child) {
+            final progress = provider.downloadProgress;
+            final isDownloading = provider.isDownloading;
+            
+            print('🎨 Short Dialog UI update: progress=${(progress * 100).toInt()}%, isDownloading=$isDownloading');
+            
+            // Auto-close dialog when download completes
+            // Close when download stops (was downloading, now not)
+            if (wasDownloading && !isDownloading && !dialogClosed) {
+              dialogClosed = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (Navigator.canPop(dialogContext)) {
+                  Navigator.of(dialogContext).pop();
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Short downloaded successfully!'),
+                        ],
+                      ),
+                      backgroundColor: Colors.grey,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              });
+            }
+            
+            wasDownloading = isDownloading;
+            
+            return Dialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.download_outlined,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      progress > 0 ? 'Downloading Short...' : 'Preparing download...',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Quality: $quality',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Progress bar
+                    Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[800],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: progress,
+                          child: Container(
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Please wait, do not close the app',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _showShortPlaylistPicker(BuildContext context) async {

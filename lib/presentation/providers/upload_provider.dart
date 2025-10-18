@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum UploadType { video, short }
 
@@ -50,9 +52,10 @@ class UploadProvider extends ChangeNotifier {
       _uploadProgress = 0.6;
       notifyListeners();
 
-      // Upload thumbnail if provided, otherwise use Cloudinary auto-generated
+      // Upload thumbnail
       String thumbnailUrl;
       if (thumbnailFile != null) {
+        // User provided a custom thumbnail
         final CloudinaryResponse thumbnailResponse = await cloudinary.uploadFile(
           CloudinaryFile.fromFile(
             thumbnailFile.path,
@@ -62,9 +65,33 @@ class UploadProvider extends ChangeNotifier {
         );
         thumbnailUrl = thumbnailResponse.secureUrl;
       } else {
-        // Use Cloudinary video thumbnail
-        final publicId = videoResponse.publicId;
-        thumbnailUrl = 'https://res.cloudinary.com/dzfepmtdw/video/upload/$publicId.jpg';
+        // Auto-generate thumbnail from video
+        print('🎬 Generating thumbnail from video...');
+        final generatedThumbnail = await _generateThumbnail(videoFile.path);
+        
+        if (generatedThumbnail != null) {
+          print('✅ Thumbnail generated successfully');
+          final CloudinaryResponse thumbnailResponse = await cloudinary.uploadFile(
+            CloudinaryFile.fromFile(
+              generatedThumbnail.path,
+              resourceType: CloudinaryResourceType.Image,
+              folder: 'thumbnails',
+            ),
+          );
+          thumbnailUrl = thumbnailResponse.secureUrl;
+          
+          // Clean up temporary thumbnail file
+          try {
+            await generatedThumbnail.delete();
+          } catch (e) {
+            print('⚠️ Could not delete temp thumbnail: $e');
+          }
+        } else {
+          print('⚠️ Thumbnail generation failed, using Cloudinary fallback');
+          // Fallback to Cloudinary auto-generated thumbnail
+          final publicId = videoResponse.publicId;
+          thumbnailUrl = 'https://res.cloudinary.com/dzfepmtdw/video/upload/$publicId.jpg';
+        }
       }
 
       _uploadProgress = 0.8;
@@ -87,7 +114,7 @@ class UploadProvider extends ChangeNotifier {
         'likes': 0,
         'dislikes': 0,
         'timestamp': FieldValue.serverTimestamp(),
-        'duration': '0:00', // You can calculate this if needed
+        'duration': 0, 
       });
 
       _uploadProgress = 1.0;
@@ -118,6 +145,29 @@ class UploadProvider extends ChangeNotifier {
     _uploadProgress = 0.0;
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// Generate thumbnail from video file
+  Future<File?> _generateThumbnail(String videoPath) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final thumbnailPath = await VideoThumbnail.thumbnailFile(
+        video: videoPath,
+        thumbnailPath: tempDir.path,
+        imageFormat: ImageFormat.JPEG,
+        maxHeight: 720, // High quality thumbnail
+        quality: 85,
+        timeMs: 1000, // Capture frame at 1 second
+      );
+
+      if (thumbnailPath != null) {
+        return File(thumbnailPath);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error generating thumbnail: $e');
+      return null;
+    }
   }
 }
 

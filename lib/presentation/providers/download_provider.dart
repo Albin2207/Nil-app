@@ -57,6 +57,8 @@ class DownloadProvider extends ChangeNotifier {
     _downloadProgress = 0.0;
     _errorMessage = null;
     notifyListeners();
+    
+    print('🚀 DownloadProvider: Starting download for $title');
 
     try {
       final download = await _repository.downloadVideo(
@@ -70,6 +72,7 @@ class DownloadProvider extends ChangeNotifier {
         description: description,
         onProgress: (progress) {
           _downloadProgress = progress;
+          print('📈 DownloadProvider: Progress updated to ${(progress * 100).toInt()}%');
           notifyListeners();
         },
       );

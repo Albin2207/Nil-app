@@ -285,7 +285,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> with SingleTickerProv
       color: Colors.grey[900],
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
         onTap: () {
           // Navigate to playlist viewer
           Navigator.push(
@@ -295,9 +296,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> with SingleTickerProv
             ),
           );
         },
-        borderRadius: BorderRadius.circular(12),
-        child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
         leading: Container(
           width: 60,
           height: 60,
@@ -364,7 +362,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> with SingleTickerProv
               ),
             ),
           ],
-        ),
         ),
       ),
     );
