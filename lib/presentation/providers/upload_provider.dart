@@ -117,6 +117,18 @@ class UploadProvider extends ChangeNotifier {
         'duration': 0, 
       });
 
+      // Update user's upload count
+      final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+      if (uploadType == UploadType.video) {
+        await userRef.update({
+          'uploadedVideosCount': FieldValue.increment(1),
+        });
+      } else {
+        await userRef.update({
+          'uploadedShortsCount': FieldValue.increment(1),
+        });
+      }
+
       _uploadProgress = 1.0;
       notifyListeners();
 

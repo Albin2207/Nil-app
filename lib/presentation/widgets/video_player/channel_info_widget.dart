@@ -36,12 +36,15 @@ class ChannelInfoWidget extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppConstants.textPrimaryColor,
+                    color: Colors.white,
                   ),
                 ),
                 Text(
                   '${FormatHelper.formatCount(subscribers)} subscribers',
-                  style: AppConstants.captionTextStyle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[400],
+                  ),
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/format_helper.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../providers/video_provider.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/playlist_provider.dart';
@@ -117,22 +118,19 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
 
     if (context.mounted) {
       Navigator.pop(context); // Close progress dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                success ? Icons.check_circle : Icons.error,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 12),
-              Text(success ? 'Download complete!' : 'Download failed'),
-            ],
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (success) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Download complete!',
+          icon: Icons.download_done,
+        );
+      } else {
+        SnackBarHelper.showError(
+          context,
+          'Download failed',
+          icon: Icons.error_outline,
+        );
+      }
     }
   }
 
@@ -161,18 +159,10 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
                   Navigator.of(dialogContext).pop();
                   
                   // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text('Download completed!'),
-                        ],
-                      ),
-                      backgroundColor: Colors.grey,
-                      duration: Duration(seconds: 2),
-                    ),
+                  SnackBarHelper.showSuccess(
+                    context,
+                    'Download completed!',
+                    icon: Icons.download_done,
                   );
                 }
               });
@@ -338,21 +328,25 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
                           ? const Icon(Icons.check, color: Colors.green)
                           : null,
                       onTap: () async {
+                        Navigator.pop(context); // Close the bottom sheet
+                        
                         if (isInPlaylist) {
                           await provider.removeVideoFromPlaylist(playlist.id, widget.videoId);
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Removed from playlist')),
+                            SnackBarHelper.showInfo(
+                              context,
+                              'Removed from playlist',
+                              icon: Icons.playlist_remove,
+                              color: Colors.orange,
                             );
                           }
                         } else {
                           await provider.addVideoToPlaylist(playlist.id, widget.videoId);
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Added to playlist'),
-                                backgroundColor: Colors.green,
-                              ),
+                            SnackBarHelper.showSuccess(
+                              context,
+                              'Added to playlist',
+                              icon: Icons.playlist_add_check,
                             );
                           }
                         }

@@ -34,7 +34,7 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // Auth Provider - Must be first
+        // Auth Provider 
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         
         // Content Providers

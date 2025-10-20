@@ -7,6 +7,7 @@ import '../providers/shorts_provider_new.dart';
 import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../../core/utils/format_helper.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
 
 class ShortsScreen extends StatefulWidget {
@@ -24,7 +25,11 @@ class _ShortsScreenState extends State<ShortsScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
+    _pageController = PageController(
+      initialPage: 0,
+      keepPage: true,
+      viewportFraction: 1.0,
+    );
   }
 
   @override
@@ -89,7 +94,9 @@ class _ShortsScreenState extends State<ShortsScreen> {
                 scrollDirection: Axis.vertical,
                 itemCount: _cachedShorts.length,
                 onPageChanged: _onPageChanged,
-                physics: const ClampingScrollPhysics(), // Better scroll physics
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 itemBuilder: (context, index) {
                   final short = _cachedShorts[index];
                   return ShortVideoPlayer(
@@ -143,15 +150,27 @@ class ShortVideoPlayer extends StatefulWidget {
   State<ShortVideoPlayer> createState() => _ShortVideoPlayerState();
 }
 
-class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
+class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerProviderStateMixin {
   late VideoPlayerController _controller;
+  late AnimationController _playPauseController;
+  late Animation<double> _playPauseAnimation;
   bool _isMuted = false;
   bool _isInitialized = false;
   bool _hasIncrementedView = false;
+  bool _showPlayPauseIcon = false;
 
   @override
   void initState() {
     super.initState();
+    _playPauseController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _playPauseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _playPauseController, curve: Curves.easeOut),
+    );
+    
     _initializeVideo();
   }
 
@@ -159,6 +178,10 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     try {
       _controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.short.videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: false,
+          allowBackgroundPlayback: false,
+        ),
       );
 
       await _controller.initialize();
@@ -171,13 +194,16 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
         });
 
         if (widget.isCurrentPage) {
-          _controller.play();
+          await _controller.play();
           _incrementViews();
         }
       }
 
+      // Minimal state updates for smoother performance
       _controller.addListener(() {
-        if (mounted) setState(() {});
+        if (mounted && _controller.value.hasError) {
+          setState(() {});
+        }
       });
     } catch (e) {
       print('Error initializing video: $e');
@@ -191,15 +217,14 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     if (!_isInitialized) return;
     
     if (widget.isCurrentPage && !oldWidget.isCurrentPage) {
-      // This short became visible
+      // This short became visible - play from where it was paused
       _controller.play();
       if (!_hasIncrementedView) {
         _incrementViews();
       }
     } else if (!widget.isCurrentPage && oldWidget.isCurrentPage) {
-      // This short is no longer visible
+      // This short is no longer visible - just pause, don't reset
       _controller.pause();
-      _controller.seekTo(Duration.zero); // Reset to beginning
     }
   }
 
@@ -220,8 +245,26 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     setState(() {
       if (_controller.value.isPlaying) {
         _controller.pause();
+        _showPlayPauseIconWithAnimation(isPause: true);
       } else {
         _controller.play();
+        _showPlayPauseIconWithAnimation(isPause: false);
+      }
+    });
+  }
+
+  void _showPlayPauseIconWithAnimation({required bool isPause}) {
+    setState(() {
+      _showPlayPauseIcon = true;
+    });
+    
+    _playPauseController.forward(from: 0.0);
+    
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _showPlayPauseIcon = false;
+        });
       }
     });
   }
@@ -252,6 +295,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
 
   @override
   void dispose() {
+    _playPauseController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -265,10 +309,12 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
         children: [
           // Video Player
           if (_isInitialized)
-            Center(
-              child: AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
+            RepaintBoundary(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: VideoPlayer(_controller),
+                ),
               ),
             )
           else
@@ -355,7 +401,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
           // Right side action buttons
           Positioned(
             right: 12,
-            bottom: 100,
+            bottom: 80,
             child: Column(
               children: [
                 _buildActionButton(
@@ -406,11 +452,10 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                           isDownloaded ? 'Saved' : 'Save',
                           isDownloaded
                               ? () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Already downloaded'),
-                                      backgroundColor: Colors.green,
-                                    ),
+                                  SnackBarHelper.showSuccess(
+                                    context,
+                                    'Already downloaded',
+                                    icon: Icons.download_done,
                                   );
                                 }
                               : () => _showShortQualityPicker(context),
@@ -427,13 +472,6 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                   Icons.playlist_add,
                   'Playlist',
                   () => _showShortPlaylistPicker(context),
-                ),
-                const SizedBox(height: 24),
-                // Channel Avatar
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(widget.short.channelAvatar),
-                  backgroundColor: Colors.grey[800],
                 ),
               ],
             ),
@@ -500,6 +538,38 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
               ],
             ),
           ),
+
+          // Play/Pause Icon Overlay with Animation
+          if (_showPlayPauseIcon)
+            Center(
+              child: AnimatedBuilder(
+                animation: _playPauseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 0.5 + (_playPauseAnimation.value * 0.5),
+                    child: Opacity(
+                      opacity: 1.0 - _playPauseAnimation.value,
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 3,
+                          ),
+                        ),
+                        child: Icon(
+                          _controller.value.isPlaying ? Icons.play_arrow : Icons.pause,
+                          color: Colors.white,
+                          size: 60,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
           // Video progress bar (thin line at bottom)
           if (_isInitialized)
@@ -585,8 +655,10 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
     final downloadProvider = context.read<DownloadProvider>();
     if (await downloadProvider.isVideoDownloaded(widget.short.id)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Already downloaded'), backgroundColor: Colors.orange),
+        SnackBarHelper.showSuccess(
+          context,
+          'Already downloaded',
+          icon: Icons.download_done,
         );
       }
       return;
@@ -610,22 +682,19 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
 
     if (context.mounted) {
       Navigator.pop(context); // Close progress dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                success ? Icons.check_circle : Icons.error,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 12),
-              Text(success ? 'Download complete!' : 'Download failed'),
-            ],
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (success) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Download complete!',
+          icon: Icons.download_done,
+        );
+      } else {
+        SnackBarHelper.showError(
+          context,
+          'Download failed',
+          icon: Icons.error_outline,
+        );
+      }
     }
   }
 
@@ -654,18 +723,10 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                   Navigator.of(dialogContext).pop();
                   
                   // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text('Short downloaded successfully!'),
-                        ],
-                      ),
-                      backgroundColor: Colors.grey,
-                      duration: Duration(seconds: 2),
-                    ),
+                  SnackBarHelper.showSuccess(
+                    context,
+                    'Short downloaded successfully!',
+                    icon: Icons.download_done,
                   );
                 }
               });
@@ -812,19 +873,27 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
                           ? const Icon(Icons.check, color: Colors.green)
                           : null,
                       onTap: () async {
+                        Navigator.pop(context); // Close bottom sheet first
+                        
                         if (isInPlaylist) {
                           await provider.removeVideoFromPlaylist(playlist.id, widget.short.id);
+                          if (context.mounted) {
+                            SnackBarHelper.showInfo(
+                              context,
+                              'Removed from playlist',
+                              icon: Icons.playlist_remove,
+                              color: Colors.orange,
+                            );
+                          }
                         } else {
                           await provider.addVideoToPlaylist(playlist.id, widget.short.id);
-                        }
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isInPlaylist ? 'Removed from playlist' : 'Added to playlist'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
+                          if (context.mounted) {
+                            SnackBarHelper.showSuccess(
+                              context,
+                              'Added to playlist',
+                              icon: Icons.playlist_add_check,
+                            );
+                          }
                         }
                       },
                     );

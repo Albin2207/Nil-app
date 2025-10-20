@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -11,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  StreamSubscription<DocumentSnapshot>? _userDataSubscription;
 
   // Getters
   User? get firebaseUser => _firebaseUser;
@@ -28,22 +31,34 @@ class AuthProvider extends ChangeNotifier {
     _authRepository.authStateChanges.listen((User? user) {
       _firebaseUser = user;
       if (user != null) {
-        _loadUserData(user.uid);
+        _listenToUserData(user.uid);
       } else {
         _currentUser = null;
+        _userDataSubscription?.cancel();
       }
       notifyListeners();
     });
   }
 
-  // Load user data from Firestore
-  Future<void> _loadUserData(String uid) async {
-    try {
-      _currentUser = await _authRepository.getUserData(uid);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading user data: $e');
-    }
+  // Listen to real-time user data changes from Firestore
+  void _listenToUserData(String uid) {
+    _userDataSubscription?.cancel();
+    _userDataSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        _currentUser = UserModel.fromFirestore(snapshot);
+        notifyListeners();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _userDataSubscription?.cancel();
+    super.dispose();
   }
 
   // Sign up with email and password
@@ -70,11 +85,8 @@ class AuthProvider extends ChangeNotifier {
         await FirebaseAuth.instance.currentUser?.reload();
         _firebaseUser = FirebaseAuth.instance.currentUser;
         
-        // Load user data from Firestore
-        await _loadUserData(user.uid);
-        
-        // Force notify listeners to update UI
-        notifyListeners();
+        // Real-time listener will automatically load user data
+        // No need to manually load - _listenToUserData is called by _init()
       }
 
       _setLoading(false);
@@ -120,7 +132,7 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         // Manually update the firebase user to get the latest data
         _firebaseUser = _authRepository.currentUser;
-        await _loadUserData(user.uid);
+        // Real-time listener will automatically load user data
       }
       
       _setLoading(false);
@@ -179,9 +191,8 @@ class AuthProvider extends ChangeNotifier {
         photoUrl: photoUrl,
       );
 
-      // Refresh firebase user and reload user data
+      // Refresh firebase user - real-time listener will update user data
       _firebaseUser = _authRepository.currentUser;
-      await _loadUserData(_firebaseUser!.uid);
       
       _setLoading(false);
       return true;

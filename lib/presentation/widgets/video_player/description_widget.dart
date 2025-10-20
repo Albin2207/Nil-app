@@ -24,15 +24,23 @@ class DescriptionWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Colors.grey[900],
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey[700]!,
+                  width: 1,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     description,
-                    style: AppConstants.subtitleTextStyle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                      height: 1.4,
+                    ),
                     maxLines: provider.isDescriptionExpanded ? null : 3,
                     overflow: provider.isDescriptionExpanded
                         ? null
@@ -44,7 +52,7 @@ class DescriptionWidget extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppConstants.textPrimaryColor,
+                        color: Colors.red,
                       ),
                     ),
                 ],

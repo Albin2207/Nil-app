@@ -31,7 +31,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         title: const Text(
           'Movies & TV Shows',
           style: TextStyle(
-            color: Colors.red,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),

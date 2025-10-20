@@ -36,12 +36,19 @@ class VideoInfoWidget extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppConstants.titleTextStyle,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${FormatHelper.formatCount(currentViews)} views • ${timeago.format(timestamp.toDate())}',
-                style: AppConstants.captionTextStyle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[400],
+                ),
               ),
             ],
           ),
