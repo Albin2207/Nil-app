@@ -74,6 +74,15 @@ class MyApp extends StatelessWidget {
       ),
       // Always start with splash screen which handles routing
       home: const SplashScreen(),
+      // This ensures the app responds to auth state changes globally
+      builder: (context, child) {
+        return Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            // Just return the child, splash screen handles navigation
+            return child ?? const SplashScreen();
+          },
+        );
+      },
     );
   }
 }

@@ -25,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -77,37 +77,108 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     
     final shouldLogout = await showDialog<bool>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Logout', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Are you sure you want to logout?',
-          style: TextStyle(color: Colors.white70),
+        backgroundColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.grey[900]!.withValues(alpha: 0.95),
+                Colors.grey[850]!.withValues(alpha: 0.95),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.red.withValues(alpha: 0.3),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withValues(alpha: 0.2),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.logout, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to logout?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[700]!, width: 1),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey[300], fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
       ),
     );
 
     if (shouldLogout == true && context.mounted) {
       await authProvider.signOut();
-      
-      if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+      // Navigation happens automatically when firebaseUser becomes null (see build method)
     }
   }
 
@@ -259,6 +330,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           final firebaseUser = authProvider.firebaseUser;
 
           if (firebaseUser == null) {
+            // If user is null, navigate to login screen immediately
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            });
+            
             return const Center(
               child: CircularProgressIndicator(color: Colors.red),
             );
@@ -490,8 +571,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                         labelPadding: const EdgeInsets.symmetric(vertical: 12),
                         tabs: const [
-                          Tab(text: 'Videos'),
-                          Tab(text: 'Shorts'),
+                          Tab(text: 'Your Account'),
                           Tab(text: 'Subscriptions'),
                           Tab(text: 'Settings'),
                         ],
@@ -503,8 +583,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               body: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildVideosTab(userId),
-                  _buildShortsTab(userId),
+                  _buildYourAccountTab(userId, user),
                   _buildSubscriptionsTab(userId),
                   _buildSettingsTab(context),
                 ],
@@ -554,6 +633,142 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  // New: Your Account Tab with nested tabs for Videos/Shorts and Channel Stats
+  Widget _buildYourAccountTab(String userId, dynamic user) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          // Channel Stats Section - More compact
+          Flexible(
+            flex: 0,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.red.withValues(alpha: 0.15),
+                  Colors.red.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.3),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildChannelStat(
+                  'Videos',
+                  user?.uploadedVideosCount ?? 0,
+                  Icons.play_circle_outline,
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.red.withValues(alpha: 0.3),
+                ),
+                _buildChannelStat(
+                  'Shorts',
+                  user?.uploadedShortsCount ?? 0,
+                  Icons.video_library_outlined,
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.red.withValues(alpha: 0.3),
+                ),
+                Consumer<SubscriptionProvider>(
+                  builder: (context, subscriptionProvider, child) {
+                    return StreamBuilder<int>(
+                      stream: subscriptionProvider.getSubscriberCountStream(userId),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data ?? (user?.subscribersCount ?? 0);
+                        return _buildChannelStat(
+                          'Subscribers',
+                          count,
+                          Icons.people_outline,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+            ),
+          ),
+          
+          // Sub-tabs for Videos and Shorts
+          Container(
+            color: Colors.black,
+            child: TabBar(
+              indicatorColor: Colors.red,
+              labelColor: Colors.red,
+              unselectedLabelColor: Colors.grey[400],
+              indicatorWeight: 2,
+              labelStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              tabs: const [
+                Tab(text: 'Your Videos'),
+                Tab(text: 'Your Shorts'),
+              ],
+            ),
+          ),
+          
+          // Content
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildVideosTab(userId),
+                _buildShortsTab(userId),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChannelStat(String label, int count, IconData icon) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: Colors.red, size: 20),
+        const SizedBox(height: 6),
+        Text(
+          _formatCount(count),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[400],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVideosTab(String userId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -570,17 +785,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.video_library_outlined, size: 80, color: Colors.grey[700]),
-                const SizedBox(height: 16),
-                Text(
-                  'No videos uploaded yet',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
-          ),
-        ],
-      ),
+            child: Text(
+              'No videos uploaded yet',
+              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+            ),
           );
         }
 
@@ -612,16 +820,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-                Icon(Icons.video_collection_outlined, size: 80, color: Colors.grey[700]),
-                const SizedBox(height: 16),
-                Text(
-                  'No shorts uploaded yet',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
-                ),
-              ],
+            child: Text(
+              'No shorts uploaded yet',
+              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
             ),
           );
         }
@@ -714,7 +915,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
 
               // Delete Button
-              IconButton(
+          IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: () => _confirmDeleteContent(video.id, 'video'),
               ),
@@ -832,15 +1033,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
                 Icon(
                   Icons.subscriptions_outlined,
                   size: 80,
                   color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
                 Text(
                   'No subscriptions yet',
                   style: TextStyle(
@@ -946,7 +1147,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                   child: const Text(
                     'Subscribed',
-                    style: TextStyle(
+              style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),

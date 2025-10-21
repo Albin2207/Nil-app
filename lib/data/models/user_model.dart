@@ -10,6 +10,7 @@ class UserModel {
   final DateTime? lastLogin;
   final int uploadedVideosCount;
   final int uploadedShortsCount;
+  final int subscribersCount;
 
   UserModel({
     required this.uid,
@@ -21,6 +22,7 @@ class UserModel {
     this.lastLogin,
     this.uploadedVideosCount = 0,
     this.uploadedShortsCount = 0,
+    this.subscribersCount = 0,
   });
 
   // From Firestore
@@ -36,6 +38,7 @@ class UserModel {
       lastLogin: (data['lastLogin'] as Timestamp?)?.toDate(),
       uploadedVideosCount: data['uploadedVideosCount'] ?? 0,
       uploadedShortsCount: data['uploadedShortsCount'] ?? 0,
+      subscribersCount: data['subscribersCount'] ?? 0,
     );
   }
 
@@ -51,6 +54,7 @@ class UserModel {
       'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
       'uploadedVideosCount': uploadedVideosCount,
       'uploadedShortsCount': uploadedShortsCount,
+      'subscribersCount': subscribersCount,
     };
   }
 
@@ -63,6 +67,7 @@ class UserModel {
     DateTime? lastLogin,
     int? uploadedVideosCount,
     int? uploadedShortsCount,
+    int? subscribersCount,
   }) {
     return UserModel(
       uid: uid,
@@ -74,6 +79,7 @@ class UserModel {
       lastLogin: lastLogin ?? this.lastLogin,
       uploadedVideosCount: uploadedVideosCount ?? this.uploadedVideosCount,
       uploadedShortsCount: uploadedShortsCount ?? this.uploadedShortsCount,
+      subscribersCount: subscribersCount ?? this.subscribersCount,
     );
   }
 }
