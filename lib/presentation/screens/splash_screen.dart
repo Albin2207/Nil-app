@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
 import 'main_screen.dart';
@@ -77,6 +78,12 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Check 2: Is user logged in?
     final isLoggedIn = authProvider.isAuthenticated;
+
+    // Load subscriptions if logged in
+    if (isLoggedIn && authProvider.firebaseUser != null) {
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      await subscriptionProvider.loadSubscriptions(authProvider.firebaseUser!.uid);
+    }
 
     if (mounted) {
       Navigator.of(context).pushReplacement(

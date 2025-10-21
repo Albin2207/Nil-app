@@ -12,6 +12,7 @@ import 'presentation/providers/tmdb_provider.dart';
 import 'presentation/providers/upload_provider.dart';
 import 'presentation/providers/download_provider.dart';
 import 'presentation/providers/playlist_provider.dart';
+import 'presentation/providers/subscription_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'data/models/downloaded_video.dart';
 import 'data/models/playlist_model.dart';
@@ -48,6 +49,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UploadProvider()),
         ChangeNotifierProvider(create: (_) => DownloadProvider()),
         ChangeNotifierProvider(create: (_) => PlaylistProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
       child: const MyApp(),
     ),

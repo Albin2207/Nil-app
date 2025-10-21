@@ -155,6 +155,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                           channelName: _videoModel!.channelName,
                           channelAvatar: _videoModel!.channelAvatar,
                           subscribers: _videoModel!.subscribers,
+                          channelId: _videoModel!.uploadedBy,
                         ),
 
                         // Description

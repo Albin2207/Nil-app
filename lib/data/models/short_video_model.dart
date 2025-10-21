@@ -13,6 +13,7 @@ class ShortVideo {
   final int dislikes;
   final int commentsCount;
   final Timestamp timestamp;
+  final String? uploadedBy;
 
   ShortVideo({
     required this.id,
@@ -27,6 +28,7 @@ class ShortVideo {
     required this.dislikes,
     required this.commentsCount,
     required this.timestamp,
+    this.uploadedBy,
   });
 
   factory ShortVideo.fromFirestore(DocumentSnapshot doc) {
@@ -44,6 +46,7 @@ class ShortVideo {
       dislikes: data['dislikes'] ?? 0,
       commentsCount: data['commentsCount'] ?? 0,
       timestamp: data['timestamp'] ?? Timestamp.now(),
+      uploadedBy: data['uploadedBy'],
     );
   }
 

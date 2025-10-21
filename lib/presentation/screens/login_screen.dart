@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../widgets/auth/custom_text_field.dart';
 import '../widgets/auth/auth_button.dart';
 import '../widgets/auth/google_sign_in_button.dart';
+import 'main_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
-import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,10 +42,18 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
+      // Load user's subscriptions
+      if (authProvider.firebaseUser != null) {
+        final subscriptionProvider = context.read<SubscriptionProvider>();
+        await subscriptionProvider.loadSubscriptions(authProvider.firebaseUser!.uid);
+      }
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
     } else {
       _showError(authProvider.errorMessage ?? 'Login failed');
     }
@@ -58,10 +67,18 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
+      // Load user's subscriptions
+      if (authProvider.firebaseUser != null) {
+        final subscriptionProvider = context.read<SubscriptionProvider>();
+        await subscriptionProvider.loadSubscriptions(authProvider.firebaseUser!.uid);
+      }
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
     } else if (authProvider.errorMessage != null) {
       _showError(authProvider.errorMessage!);
     }

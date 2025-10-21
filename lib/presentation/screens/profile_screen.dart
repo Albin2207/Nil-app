@@ -4,9 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../../data/models/subscription_model.dart';
 import 'login_screen.dart';
 import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
+import 'creator_profile_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -22,13 +25,22 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
   }
 
   // Fix negative counts (one-time use)
@@ -480,6 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         tabs: const [
                           Tab(text: 'Videos'),
                           Tab(text: 'Shorts'),
+                          Tab(text: 'Subscriptions'),
                           Tab(text: 'Settings'),
                         ],
                       ),
@@ -492,6 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 children: [
                   _buildVideosTab(userId),
                   _buildShortsTab(userId),
+                  _buildSubscriptionsTab(userId),
                   _buildSettingsTab(context),
                 ],
               ),
@@ -801,6 +815,160 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSubscriptionsTab(String userId) {
+    final subscriptionProvider = context.watch<SubscriptionProvider>();
+
+    return StreamBuilder<List<SubscriptionModel>>(
+      stream: subscriptionProvider.getSubscriptionsStream(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.red),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.subscriptions_outlined,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No subscriptions yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Subscribe to channels to see them here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final subscriptions = snapshot.data!;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: subscriptions.length,
+          itemBuilder: (context, index) {
+            final subscription = subscriptions[index];
+            
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(12),
+                leading: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 28,
+                    backgroundImage: CachedNetworkImageProvider(
+                      subscription.channelAvatar,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  subscription.channelName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                subtitle: StreamBuilder<int>(
+                  stream: subscriptionProvider.getSubscriberCountStream(
+                    subscription.channelId,
+                  ),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data ?? 0;
+                    return Text(
+                      '${_formatCount(count)} subscribers',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    );
+                  },
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () async {
+                    final success = await subscriptionProvider.unsubscribe(
+                      userId: userId,
+                      channelId: subscription.channelId,
+                    );
+                    
+                    if (success && mounted) {
+                      SnackBarHelper.showInfo(
+                        context,
+                        'Unsubscribed from ${subscription.channelName}',
+                        icon: Icons.notifications_off,
+                        color: Colors.orange,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[200],
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: const Text(
+                    'Subscribed',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreatorProfileScreen(
+                        creatorId: subscription.channelId,
+                        creatorName: subscription.channelName,
+                        creatorAvatar: subscription.channelAvatar,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

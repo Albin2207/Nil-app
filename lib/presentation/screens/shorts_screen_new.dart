@@ -6,9 +6,12 @@ import '../../data/models/short_video_model.dart';
 import '../providers/shorts_provider_new.dart';
 import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../../core/utils/format_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
+import 'creator_profile_screen.dart';
 
 class ShortsScreen extends StatefulWidget {
   const ShortsScreen({super.key});
@@ -488,27 +491,121 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                 // Channel Name
                 Row(
                   children: [
-                    Text(
-                      '@${widget.short.channelName}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    InkWell(
+                      onTap: widget.short.uploadedBy != null
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CreatorProfileScreen(
+                                    creatorId: widget.short.uploadedBy!,
+                                    creatorName: widget.short.channelName,
+                                    creatorAvatar: widget.short.channelAvatar,
+                                  ),
+                                ),
+                              );
+                            }
+                          : null,
+                      child: Text(
+                        '@${widget.short.channelName}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white, width: 1.5),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        minimumSize: Size.zero,
-                      ),
-                      child: const Text('Subscribe'),
+                    Consumer2<AuthProvider, SubscriptionProvider>(
+                      builder: (context, authProvider, subscriptionProvider, child) {
+                        final currentUserId = authProvider.firebaseUser?.uid;
+                        final isOwnContent = currentUserId == widget.short.uploadedBy;
+                        final isSubscribed = widget.short.uploadedBy != null
+                            ? subscriptionProvider.isSubscribed(widget.short.uploadedBy!)
+                            : false;
+
+                        // Don't show subscribe button if it's user's own content or not logged in
+                        if (isOwnContent || currentUserId == null || widget.short.uploadedBy == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return OutlinedButton(
+                          onPressed: () async {
+                            print('🎬 Subscribe button pressed - isSubscribed: $isSubscribed');
+                            print('🎬 currentUserId: $currentUserId');
+                            print('🎬 channelId: ${widget.short.uploadedBy}');
+                            
+                            if (isSubscribed) {
+                              print('🎬 Calling unsubscribe...');
+                              final success = await subscriptionProvider.unsubscribe(
+                                userId: currentUserId,
+                                channelId: widget.short.uploadedBy!,
+                              );
+                              
+                              print('🎬 Unsubscribe result: $success');
+                              
+                              if (context.mounted) {
+                                if (success) {
+                                  SnackBarHelper.showInfo(
+                                    context,
+                                    'Unsubscribed',
+                                    icon: Icons.notifications_off,
+                                    color: Colors.orange,
+                                  );
+                                } else {
+                                  SnackBarHelper.showError(
+                                    context,
+                                    'Failed to unsubscribe',
+                                    icon: Icons.error_outline,
+                                  );
+                                }
+                              }
+                            } else {
+                              print('🎬 Calling subscribe...');
+                              final success = await subscriptionProvider.subscribe(
+                                userId: currentUserId,
+                                channelId: widget.short.uploadedBy!,
+                                channelName: widget.short.channelName,
+                                channelAvatar: widget.short.channelAvatar,
+                              );
+                              
+                              print('🎬 Subscribe result: $success');
+                              
+                              if (context.mounted) {
+                                if (success) {
+                                  SnackBarHelper.showSuccess(
+                                    context,
+                                    'Subscribed to ${widget.short.channelName}',
+                                    icon: Icons.notifications_active,
+                                  );
+                                } else {
+                                  SnackBarHelper.showError(
+                                    context,
+                                    'Failed to subscribe. Check console for details.',
+                                    icon: Icons.error_outline,
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isSubscribed ? Colors.grey[300] : Colors.white,
+                            backgroundColor: isSubscribed 
+                                ? Colors.white.withValues(alpha: 0.2)
+                                : Colors.transparent,
+                            side: BorderSide(
+                              color: isSubscribed ? Colors.grey[300]! : Colors.white,
+                              width: 1.5,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                          ),
+                          child: Text(isSubscribed ? 'Subscribed' : 'Subscribe'),
+                        );
+                      },
                     ),
                   ],
                 ),

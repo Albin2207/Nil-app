@@ -14,6 +14,7 @@ class VideoModel {
   final int dislikes;
   final int subscribers;
   final Timestamp timestamp;
+  final String? uploadedBy;
 
   VideoModel({
     required this.id,
@@ -29,6 +30,7 @@ class VideoModel {
     required this.dislikes,
     required this.subscribers,
     required this.timestamp,
+    this.uploadedBy,
   });
 
   factory VideoModel.fromFirestore(DocumentSnapshot doc) {
@@ -47,6 +49,7 @@ class VideoModel {
       dislikes: data['dislikes'] ?? 0,
       subscribers: data['subscribers'] ?? 0,
       timestamp: data['timestamp'] ?? Timestamp.now(),
+      uploadedBy: data['uploadedBy'],
     );
   }
 

@@ -9,8 +9,13 @@ service cloud.firestore {
       allow read: if true;
       // Only authenticated users can create their own profile
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Only the user can update/delete their own profile
-      allow update, delete: if request.auth != null && request.auth.uid == userId;
+      // Users can update their own profile
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to update ONLY subscribersCount field (for subscribe/unsubscribe)
+      allow update: if request.auth != null && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscribersCount']);
+      // Only the user can delete their own profile
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
     // Videos collection
@@ -67,6 +72,20 @@ service cloud.firestore {
           (!resource.data.keys().hasAny(['userId']) || 
            request.auth.uid == resource.data.userId);
       }
+    }
+    
+    // Subscriptions collection
+    match /subscriptions/{subscriptionId} {
+      // Anyone can read subscriptions (to check if user is subscribed)
+      allow read: if true;
+      // Only authenticated users can create subscriptions
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      // Only the subscription owner can delete
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      // No updates allowed (delete and recreate instead)
+      allow update: if false;
     }
   }
 }
