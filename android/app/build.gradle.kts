@@ -24,8 +24,8 @@ android {
         applicationId = "com.nil.streamapp"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
 
         // Optional: MultiDex if your app exceeds method limit
         multiDexEnabled = true

@@ -16,6 +16,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   late PageController _pageController;
+  DateTime? _lastBackPressed;
 
   @override
   void initState() {
@@ -42,11 +43,48 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  Future<bool> _onWillPop() async {
+    // If not on home screen, navigate to home
+    if (_currentIndex != 0) {
+      setState(() {
+        _currentIndex = 0;
+      });
+      _pageController.jumpToPage(0);
+      return false; // Don't exit
+    }
+    
+    // If on home screen, check double-tap to exit
+    final now = DateTime.now();
+    if (_lastBackPressed == null || 
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
+      
+      // Show toast message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Press back again to exit'),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.grey[900],
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return false; // Don't exit
+    }
+    
+    return true; // Exit app
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-     
-      body: PageView(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+       
+        body: PageView(
         controller: _pageController,
         onPageChanged: _onPageChanged,
         physics: const NeverScrollableScrollPhysics(),
@@ -108,6 +146,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

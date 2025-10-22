@@ -45,7 +45,7 @@ class ShortCommentItem extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundImage: NetworkImage(comment.userAvatar),
-            backgroundColor: Colors.grey[300],
+            backgroundColor: Colors.grey[700],
           ),
           const SizedBox(width: 12),
           
@@ -62,7 +62,7 @@ class ShortCommentItem extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: Colors.black,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -70,7 +70,7 @@ class ShortCommentItem extends StatelessWidget {
                       _formatTimestamp(comment.timestamp),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: Colors.grey[500],
                       ),
                     ),
                     const Spacer(),
@@ -101,9 +101,9 @@ class ShortCommentItem extends StatelessWidget {
                 // Comment text
                 Text(
                   comment.text,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: Colors.grey[300],
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -119,7 +119,7 @@ class ShortCommentItem extends StatelessWidget {
                           Icon(
                             isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
                             size: 16,
-                            color: isLiked ? Colors.blue : Colors.grey[700],
+                            color: isLiked ? const Color(0xFF7B61FF) : Colors.grey[500],
                           ),
                           if (comment.likes > 0) ...[
                             const SizedBox(width: 4),
@@ -127,7 +127,8 @@ class ShortCommentItem extends StatelessWidget {
                               FormatHelper.formatCount(comment.likes),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[700],
+                                color: isLiked ? const Color(0xFF7B61FF) : Colors.grey[500],
+                                fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -142,7 +143,7 @@ class ShortCommentItem extends StatelessWidget {
                       child: Icon(
                         isDisliked ? Icons.thumb_down : Icons.thumb_down_outlined,
                         size: 16,
-                        color: isDisliked ? Colors.blue : Colors.grey[700],
+                        color: isDisliked ? const Color(0xFF7B61FF) : Colors.grey[500],
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -155,7 +156,7 @@ class ShortCommentItem extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[700],
+                          color: Colors.grey[400],
                         ),
                       ),
                     ),

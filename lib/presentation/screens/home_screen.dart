@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'video_playing_screen.dart';
 import 'profile_screen.dart';
 import '../providers/auth_provider.dart';
+import '../../core/services/connectivity_service.dart';
+import '../widgets/common/offline_widget.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -29,6 +31,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final connectivityService = context.watch<ConnectivityService>();
+    
+    // Show offline widget if no connection
+    if (!connectivityService.isOnline) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.red.withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.play_arrow, color: Colors.red, size: 24),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'NIL',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: OfflineWidget(
+          onRetry: () async {
+            await connectivityService.refresh();
+            if (mounted) setState(() {});
+          },
+        ),
+      );
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

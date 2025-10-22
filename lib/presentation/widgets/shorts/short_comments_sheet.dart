@@ -95,56 +95,67 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
-      maxChildSize: 0.9,
+      maxChildSize: 0.95,
+      snap: true,
+      snapSizes: const [0.6, 0.95],
       builder: (context, scrollController) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: keyboardHeight),
+        return AnimatedPadding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            decoration: BoxDecoration(
+              color: const Color(0xFF121212), // Dark background like YouTube
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
             child: Column(
               children: [
-          // Handle bar
+          // Handle bar - more prominent
           Container(
-            margin: const EdgeInsets.only(top: 8),
-            width: 40,
+            margin: const EdgeInsets.only(top: 10, bottom: 4),
+            width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: Colors.grey[700],
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           
           // Header
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Comments ${widget.commentsCount > 0 ? '(${widget.commentsCount})' : ''}',
+                  widget.commentsCount > 0 ? 'Comments ${widget.commentsCount}' : 'Comments',
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.black),
+                  icon: const Icon(Icons.close, color: Colors.white),
                 ),
               ],
             ),
           ),
           
-          const Divider(height: 1),
+          Divider(height: 1, color: Colors.grey[800]),
           
           // Comments list
           Expanded(
@@ -159,27 +170,33 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.comment_outlined, size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No comments yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.comment_outlined, size: 48, color: Colors.grey[600]),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No comments yet',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Be the first to comment!',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Be the first to comment!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 }
@@ -254,14 +271,10 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
           // Comment input - Fixed to bottom
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+              color: const Color(0xFF1E1E1E),
+              border: Border(
+                top: BorderSide(color: Colors.grey[800]!, width: 1),
+              ),
             ),
             child: SafeArea(
               child: Padding(
@@ -278,21 +291,21 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
                         CircleAvatar(
                           radius: 18,
                           backgroundImage: NetworkImage(userAvatar),
-                          backgroundColor: Colors.grey[300],
+                          backgroundColor: Colors.grey[700],
                         ),
                     const SizedBox(width: 12),
                     Expanded(
                     child: TextField(
                       controller: _commentController,
-                      style: const TextStyle(color: Colors.black),
+                      style: const TextStyle(color: Colors.white),
                       enableInteractiveSelection: true,
                       decoration: InputDecoration(
                         hintText: 'Add a comment...',
                         hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: const Color(0xFF2A2A2A),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -315,7 +328,7 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
                         await _postComment();
                         FocusManager.instance.primaryFocus?.unfocus();
                       },
-                      icon: const Icon(Icons.send, color: Colors.blue),
+                      icon: const Icon(Icons.send, color: Color(0xFF7B61FF), size: 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),

@@ -8,9 +8,11 @@ import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../../core/services/connectivity_service.dart';
 import '../../core/utils/format_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
+import '../widgets/common/offline_widget.dart';
 import 'creator_profile_screen.dart';
 
 class ShortsScreen extends StatefulWidget {
@@ -51,6 +53,22 @@ class _ShortsScreenState extends State<ShortsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final connectivityService = context.watch<ConnectivityService>();
+    
+    // Show offline widget if no connection
+    if (!connectivityService.isOnline) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: OfflineWidget(
+          message: 'Connect to the internet to watch shorts',
+          onRetry: () async {
+            await connectivityService.refresh();
+            if (mounted) setState(() {});
+          },
+        ),
+      );
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -284,6 +302,8 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
       isDismissible: true,
       enableDrag: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      transitionAnimationController: null,
       builder: (context) => ShortCommentsSheet(
         shortId: widget.short.id,
         commentsCount: widget.short.commentsCount,

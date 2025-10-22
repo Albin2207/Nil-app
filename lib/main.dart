@@ -13,6 +13,7 @@ import 'presentation/providers/upload_provider.dart';
 import 'presentation/providers/download_provider.dart';
 import 'presentation/providers/playlist_provider.dart';
 import 'presentation/providers/subscription_provider.dart';
+import 'core/services/connectivity_service.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'data/models/downloaded_video.dart';
 import 'data/models/playlist_model.dart';
@@ -35,6 +36,9 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        // Connectivity Service
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        
         // Auth Provider 
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         

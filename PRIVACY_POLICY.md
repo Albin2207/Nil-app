@@ -1,6 +1,6 @@
 # Privacy Policy for Nil Stream App
 
-**Last Updated:** October 18, 2025
+**Last Updated:** October 21, 2025
 
 ## Introduction
 
@@ -27,13 +27,17 @@ When you create an account or use our App, we may collect the following personal
 - **Thumbnails** - Images associated with your uploaded content
 - **Comments** - Text comments you post on videos and shorts
 - **Likes/Dislikes** - Your engagement with content
-- **Subscriptions** - Channels you subscribe to
+- **Subscriptions** - Channels you subscribe to and creators you follow
+- **Subscriber Information** - Your subscriber count if you are a content creator
+- **Creator Profiles** - Information about content creators you interact with
 
 ### 1.3 Automatically Collected Information
 
 - **Device Information** - Device model, operating system version
 - **Usage Data** - Videos watched, app interactions, session duration
 - **Local Storage Data** - Downloaded videos and playlists stored locally on your device
+- **Network Status** - Internet connectivity status (used for offline mode detection only)
+- **App Navigation** - Screen navigation and back button interactions for improved UX
 
 ### 1.4 Third-Party Authentication
 
@@ -52,8 +56,11 @@ We use the collected information for the following purposes:
 - To create and manage your user account
 - To enable video and short uploads, viewing, and streaming
 - To process and display comments, likes, and subscriptions
-- To personalize your app experience
+- To manage channel subscriptions and track subscriber counts
+- To personalize your app experience and content recommendations
 - To manage downloads and playlists
+- To detect network connectivity and provide offline mode functionality
+- To enable smooth navigation and back button handling
 
 ### 2.2 Communication
 - To send you authentication emails
@@ -100,17 +107,20 @@ The following information is **publicly visible** to all App users:
 - Your profile photo (if set)
 - Videos and shorts you upload
 - Comments you post
-- Your likes and subscriptions (visible to other users)
+- Your subscriber count (if you are a content creator)
+- Channels you subscribe to (visible on your profile)
+- Your uploaded content statistics (video count, shorts count)
 
 ### 4.2 Third-Party Service Providers
 We use the following third-party services to provide our App:
 
 | Service | Purpose | Privacy Policy |
 |---------|---------|----------------|
-| **Google Firebase** | Authentication, database, hosting | [Firebase Privacy](https://firebase.google.com/support/privacy) |
+| **Google Firebase** | Authentication, database, hosting, real-time subscriptions | [Firebase Privacy](https://firebase.google.com/support/privacy) |
 | **Cloudinary** | Video and image hosting | [Cloudinary Privacy](https://cloudinary.com/privacy) |
 | **Google Sign-In** | Third-party authentication | [Google Privacy](https://policies.google.com/privacy) |
 | **The Movie Database (TMDB)** | Movie information and metadata | [TMDB Privacy](https://www.themoviedb.org/privacy-policy) |
+| **Connectivity Plus** | Network connectivity detection (local device only) | Open source package |
 
 ### 4.3 Legal Requirements
 We may disclose your information if required by law or in response to:
@@ -138,22 +148,34 @@ If you are a parent or guardian and believe your child has provided us with pers
 You can access and update your profile information directly in the App under **Profile Settings**.
 
 ### 6.2 Delete Account
-You can request account deletion by:
-- Contacting us at the email address below
-- We will delete your account and associated data within **30 days**
+You can delete your account directly from the app:
+- Go to **Profile** → **Settings** → **Delete Account**
+- Confirm deletion when prompted
+- Your account will be deleted immediately
 
-### 6.3 Manage Downloads
+Alternatively, you can:
+- Visit our help page: https://sites.google.com/view/nilapp-user-help/home
+- Email us at: thomasalbin35@gmail.com
+
+All your data (account, uploaded content, comments, subscriptions) will be deleted permanently.
+
+### 6.3 Manage Subscriptions
+You can subscribe and unsubscribe from channels directly in the App by:
+- Tapping the subscribe/unsubscribe button on videos, shorts, or creator profiles
+- Managing your subscriptions in your profile's "Subscriptions" tab
+
+### 6.4 Manage Downloads
 You can manage and delete downloaded videos and playlists from the **Downloads** section of the App.
 
-### 6.4 Revoke Permissions
-You can revoke app permissions (storage, etc.) through your device settings at any time.
+### 6.5 Revoke Permissions
+You can revoke app permissions (storage, network access, etc.) through your device settings at any time.
 
 ---
 
 ## 7. Data Retention
 
 - **Active Accounts**: We retain your data for as long as your account is active
-- **Deleted Accounts**: Data is deleted within **30 days** of account deletion request
+- **Deleted Accounts**: Data is deleted **immediately** when you delete your account from the app
 - **Legal Requirements**: Some data may be retained longer if required by law
 - **Local Downloads**: Deleted when you uninstall the App or manually delete them
 
@@ -170,6 +192,8 @@ Your information may be transferred to and stored on servers located outside you
 Our App may use:
 - **Local Storage**: To store user preferences and downloaded content
 - **Authentication Tokens**: To maintain your login session
+- **Network State Monitoring**: To detect connectivity and provide offline mode
+- **Session Management**: To maintain your login state and app navigation
 - **Analytics**: To understand app usage (if implemented)
 
 We do **not** use cookies for advertising or tracking across other apps or websites.
@@ -198,11 +222,11 @@ Our App may contain links to third-party websites or services (e.g., TMDB for mo
 
 If you have questions, concerns, or requests regarding this Privacy Policy or your data, please contact us:
 
-**Email:** [YOUR_EMAIL@example.com]  
+**Email:** thomasalbin35@gmail.com  
 **App Name:** Nil Stream App  
-**Developer:** [Your Name/Company Name]  
+**Account Deletion:** https://sites.google.com/view/nilapp-user-help/home  
 
-**Response Time:** We aim to respond to all inquiries within **7 business days**.
+**Response Time:** We aim to respond to all inquiries within **24 hours**.
 
 ---
 
@@ -227,16 +251,17 @@ This Privacy Policy is governed by the laws of **[Your Country/State]**, without
 
 ## Summary (Quick Reference)
 
-✅ **We collect:** Email, username, profile photo, uploaded content  
-✅ **We use it for:** Account management, app functionality, content delivery  
+✅ **We collect:** Email, username, profile photo, uploaded content, subscriptions  
+✅ **We use it for:** Account management, app functionality, content delivery, subscriptions  
 ✅ **We store it on:** Google Firebase, Cloudinary (secure cloud services)  
-✅ **We share it with:** Only necessary third-party services (Firebase, Cloudinary)  
-✅ **You can:** View, update, and delete your data anytime  
+✅ **We share it with:** Only necessary third-party services (Firebase, Cloudinary, TMDB)  
+✅ **You can:** View, update, delete your data, manage subscriptions, and downloads anytime  
 ✅ **We protect:** Your data with industry-standard security measures  
+✅ **Offline mode:** Works locally on your device, no data sent when offline  
 ❌ **We DON'T:** Sell your data or use it for advertising  
 
 ---
 
-*This privacy policy was last updated on October 18, 2025*
+*This privacy policy was last updated on October 21, 2025*
 
 

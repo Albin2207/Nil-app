@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nil Stream - Account Deletion Request</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .warning-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .warning-box ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .warning-box li {
+            margin-bottom: 8px;
+        }
+
+        .info-section {
+            margin-bottom: 30px;
+        }
+
+        .info-section h2 {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .info-section p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .data-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .data-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .data-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            color: #555;
+        }
+
+        .data-list li:before {
+            content: "✗ ";
+            color: #dc3545;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .data-list li:last-child {
+            border-bottom: none;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+
+        .form-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .checkbox-group input {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            color: #555;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗑️ Account Deletion Request</h1>
+            <p>Nil Stream App</p>
+        </div>
+
+        <div class="warning-box">
+            <h3>⚠️ Important: This Action is Permanent</h3>
+            <ul>
+                <li>Account deletion is <strong>irreversible</strong></li>
+                <li>All your data will be permanently deleted within 30 days</li>
+                <li>You will lose access to your account immediately after confirmation</li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <h2>What Will Be Deleted?</h2>
+            <div class="data-list">
+                <ul>
+                    <li>Your profile information (email, username, profile photo)</li>
+                    <li>All videos and shorts you uploaded</li>
+                    <li>All your comments and replies</li>
+                    <li>Your likes and dislikes</li>
+                    <li>Your channel subscriptions and subscriber list</li>
+                    <li>Your playlists and saved videos</li>
+                    <li>Downloaded content (cleared from app)</li>
+                    <li>All associated metadata and statistics</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>Data Deletion Timeline</h2>
+            <p><strong>Immediate:</strong> Your account will be deactivated and you will be logged out.</p>
+            <p><strong>Within 7 days:</strong> Your uploaded content will be removed from public view.</p>
+            <p><strong>Within 30 days:</strong> All your data will be permanently deleted from our servers.</p>
+            <p><em>Note: Some data may be retained if required by law or for legitimate business purposes (e.g., preventing fraud).</em></p>
+        </div>
+
+        <div class="form-section">
+            <h3>Submit Deletion Request</h3>
+            <form id="deletionForm">
+                <div class="form-group">
+                    <label for="email">Email Address (associated with your account) *</label>
+                    <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username (optional)</label>
+                    <input type="text" id="username" name="username" placeholder="Your Nil Stream username">
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Reason for Deletion (optional)</label>
+                    <textarea id="reason" name="reason" placeholder="Help us improve by sharing why you're leaving..."></textarea>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="confirm" name="confirm" required>
+                    <label for="confirm">I understand that this action is permanent and all my data will be deleted.</label>
+                </div>
+
+                <button type="submit" class="btn-submit">Submit Deletion Request</button>
+
+                <div class="success-message" id="successMessage">
+                    ✅ Your account deletion request has been submitted successfully. You will receive a confirmation email shortly. Your account will be deleted within 30 days.
+                </div>
+
+                <div class="error-message" id="errorMessage">
+                    ❌ There was an error submitting your request. Please try again or contact support.
+                </div>
+            </form>
+        </div>
+
+        <div class="footer">
+            <p>Need help? Contact us at <strong>thomasalbin35@gmail.com</strong></p>
+            <p><a href="PRIVACY_POLICY.md">Privacy Policy</a> | <a href="https://sites.google.com/view/nilapp-user-help/home">Account Deletion Help</a></p>
+            <p>© 2025 Nil Stream App. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('deletionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const submitBtn = form.querySelector('.btn-submit');
+            const successMsg = document.getElementById('successMessage');
+            const errorMsg = document.getElementById('errorMessage');
+
+            // Hide previous messages
+            successMsg.style.display = 'none';
+            errorMsg.style.display = 'none';
+
+            // Get form data
+            const formData = {
+                email: document.getElementById('email').value,
+                username: document.getElementById('username').value,
+                reason: document.getElementById('reason').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                // OPTION 1: Send to your backend/Firebase Function
+                // const response = await fetch('YOUR_BACKEND_ENDPOINT', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //     },
+                //     body: JSON.stringify(formData)
+                // });
+
+                // OPTION 2: Send via email using mailto (simple but limited)
+                const subject = encodeURIComponent('Account Deletion Request - Nil Stream');
+                const body = encodeURIComponent(
+                    `Account Deletion Request\n\n` +
+                    `Email: ${formData.email}\n` +
+                    `Username: ${formData.username || 'Not provided'}\n` +
+                    `Reason: ${formData.reason || 'Not provided'}\n` +
+                    `Timestamp: ${formData.timestamp}\n\n` +
+                    `Please delete my Nil Stream account and all associated data.`
+                );
+
+                // Open email client (you can replace this with actual backend call)
+                window.location.href = `mailto:thomasalbin35@gmail.com?subject=${subject}&body=${body}`;
+
+                // Show success message
+                successMsg.style.display = 'block';
+                form.reset();
+
+                // Scroll to success message
+                successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorMsg.style.display = 'block';
+                errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Deletion Request';
+            }
+        });
+    </script>
+</body>
+</html>
+

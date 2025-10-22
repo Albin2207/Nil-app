@@ -18,6 +18,10 @@ class CommentsPreviewWidget extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
+      transitionAnimationController: null,
       builder: (context) => CommentsBottomSheet(videoId: videoId),
     );
   }

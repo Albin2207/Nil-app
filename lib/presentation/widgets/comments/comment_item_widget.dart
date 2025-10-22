@@ -52,7 +52,7 @@ class CommentItemWidget extends StatelessWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: isReply ? 12 : 13,
-                            color: AppConstants.textPrimaryColor,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -62,7 +62,7 @@ class CommentItemWidget extends StatelessWidget {
                               : 'Just now',
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppConstants.textSecondaryColor,
+                            color: Colors.grey[500],
                           ),
                         ),
                         const Spacer(),
@@ -93,7 +93,7 @@ class CommentItemWidget extends StatelessWidget {
                       comment.text,
                       style: TextStyle(
                         fontSize: isReply ? 13 : 14,
-                        color: AppConstants.textPrimaryColor.withValues(alpha: 0.87),
+                        color: Colors.grey[300],
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -110,7 +110,7 @@ class CommentItemWidget extends StatelessWidget {
                                   size: 16,
                                   color: hasLiked
                                       ? AppConstants.primaryColor
-                                      : AppConstants.textSecondaryColor,
+                                      : Colors.grey[500],
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
@@ -119,7 +119,7 @@ class CommentItemWidget extends StatelessWidget {
                                     fontSize: 12,
                                     color: hasLiked
                                         ? AppConstants.primaryColor
-                                        : AppConstants.textSecondaryColor,
+                                        : Colors.grey[500],
                                     fontWeight:
                                         hasLiked ? FontWeight.w600 : FontWeight.normal,
                                   ),
@@ -142,7 +142,7 @@ class CommentItemWidget extends StatelessWidget {
                                   size: 16,
                                   color: hasDisliked
                                       ? AppConstants.primaryColor
-                                      : AppConstants.textSecondaryColor,
+                                      : Colors.grey[500],
                                 ),
                                 if (comment.dislikes > 0) ...[
                                   const SizedBox(width: 6),
@@ -152,7 +152,7 @@ class CommentItemWidget extends StatelessWidget {
                                       fontSize: 12,
                                       color: hasDisliked
                                           ? AppConstants.primaryColor
-                                          : AppConstants.textSecondaryColor,
+                                          : Colors.grey[500],
                                       fontWeight: hasDisliked
                                           ? FontWeight.w600
                                           : FontWeight.normal,
@@ -174,7 +174,7 @@ class CommentItemWidget extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppConstants.textSecondaryColor,
+                                  color: Colors.grey[400],
                                 ),
                               ),
                             ),

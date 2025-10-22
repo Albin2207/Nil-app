@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/tmdb_provider.dart';
 import '../../data/models/movie_tmdb_model.dart';
+import '../../core/services/connectivity_service.dart';
+import '../widgets/common/offline_widget.dart';
 import 'movie_details_screen.dart';
 import 'movie_search_screen.dart';
 
@@ -24,6 +26,35 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final connectivityService = context.watch<ConnectivityService>();
+    
+    // Show offline widget if no connection
+    if (!connectivityService.isOnline) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          title: const Text(
+            'Movies & TV Shows',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        body: OfflineWidget(
+          message: 'Connect to the internet to browse movies & TV shows',
+          onRetry: () async {
+            await connectivityService.refresh();
+            if (mounted) {
+              setState(() {});
+              context.read<TmdbProvider>().loadAllMovies();
+            }
+          },
+        ),
+      );
+    }
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
