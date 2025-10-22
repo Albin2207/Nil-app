@@ -38,7 +38,7 @@ class _ReplyDialogState extends State<ReplyDialog> {
     
     // Use Firebase Auth data directly (always available)
     final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Anonymous User';
-      final userAvatar = user?.photoURL ?? 'https://ui-avatars.com/api/?name=$userName&background=random';
+    final userAvatar = user?.photoURL ?? 'https://ui-avatars.com/api/?name=$userName&background=random';
     
     commentProvider.postComment(
       videoId: widget.videoId,
@@ -47,6 +47,7 @@ class _ReplyDialogState extends State<ReplyDialog> {
       userId: user?.uid,
       userName: userName,
       userAvatar: userAvatar,
+      replyToUsername: widget.username, // Add reply context
     );
 
     Navigator.pop(context);

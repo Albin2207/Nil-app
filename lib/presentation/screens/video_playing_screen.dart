@@ -168,7 +168,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                         ),
 
                         // Comments Section
-                        CommentsPreviewWidget(videoId: _videoModel!.id),
+                        CommentsPreviewWidget(
+                          videoId: _videoModel!.id,
+                          videoOwnerId: _videoModel!.uploadedBy ?? '',
+                        ),
 
                         const Divider(
                           height: 1,

@@ -9,10 +9,12 @@ import 'reply_dialog.dart';
 
 class CommentsBottomSheet extends StatefulWidget {
   final String videoId;
+  final String videoOwnerId;
 
   const CommentsBottomSheet({
     super.key,
     required this.videoId,
+    required this.videoOwnerId,
   });
 
   @override
@@ -277,56 +279,27 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
                           itemCount: topLevelComments.length,
                           itemBuilder: (context, index) {
                             final comment = topLevelComments[index];
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CommentItemWidget(
-                                  key: ValueKey(comment.id),
-                                  videoId: widget.videoId,
-                                  comment: comment,
-                                  onReplyTap: () async {
-                                    FocusManager.instance.primaryFocus?.unfocus();
-                                    await Future.delayed(const Duration(milliseconds: 200));
-                                    if (context.mounted) {
-                                      _showReplyDialog(comment.id, comment.username);
-                                    }
-                                  },
-                                  onDeleteTap: () async {
-                                    // Ensure keyboard is completely dismissed
-                                    _textFieldFocusNode.unfocus();
-                                    FocusManager.instance.primaryFocus?.unfocus();
-                                    _commentController.clear();
-                                    // Wait for everything to settle
-                                    await Future.delayed(const Duration(milliseconds: 100));
-                                    if (context.mounted) {
-                                      await _deleteComment(provider, comment.id);
-                                    }
-                                  },
-                                ),
-                                // Show replies
-                                ...provider
-                                    .getReplies(snapshot.data!, comment.id)
-                                    .map((reply) => Padding(
-                                          padding: const EdgeInsets.only(left: 48),
-                                          child: CommentItemWidget(
-                                            key: ValueKey(reply.id),
-                                            videoId: widget.videoId,
-                                            comment: reply,
-                                            isReply: true,
-                                            onDeleteTap: () async {
-                                              // Ensure keyboard is completely dismissed
-                                              _textFieldFocusNode.unfocus();
-                                              FocusManager.instance.primaryFocus?.unfocus();
-                                              _commentController.clear();
-                                              // Wait for everything to settle
-                                              await Future.delayed(const Duration(milliseconds: 100));
-                                              if (context.mounted) {
-                                                await _deleteComment(provider, reply.id);
-                                              }
-                                            },
-                                          ),
-                                        )),
-                              ],
+                            return CommentItemWidget(
+                              key: ValueKey(comment.id),
+                              videoId: widget.videoId,
+                              videoOwnerId: widget.videoOwnerId,
+                              comment: comment,
+                              onReply: (parentId, parentUsername) async {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                await Future.delayed(const Duration(milliseconds: 200));
+                                if (context.mounted) {
+                                  _showReplyDialog(parentId, parentUsername);
+                                }
+                              },
+                              onDeleteTap: () async {
+                                _textFieldFocusNode.unfocus();
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                _commentController.clear();
+                                await Future.delayed(const Duration(milliseconds: 100));
+                                if (context.mounted) {
+                                  await _deleteComment(provider, comment.id);
+                                }
+                              },
                             );
                           },
                         );

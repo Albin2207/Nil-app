@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'video_playing_screen.dart';
 import 'profile_screen.dart';
 import '../providers/auth_provider.dart';
+import '../providers/download_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../widgets/common/offline_widget.dart';
 
 
@@ -602,7 +606,7 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                                 color: Colors.grey[400],
                               ),
                               onPressed: () {
-                                _showBottomSheet(context);
+                                _showBottomSheet(context, widget.video, data);
                               },
                               padding: const EdgeInsets.all(8),
                               constraints: const BoxConstraints(),
@@ -621,12 +625,19 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
     );
   }
 
-  void _showBottomSheet(BuildContext context) {
+  void _showBottomSheet(BuildContext context, QueryDocumentSnapshot video, Map<String, dynamic> data) {
+    final videoId = video.id;
+    final videoTitle = data['title'] ?? 'Untitled';
+    final videoUrl = data['videoUrl'] ?? '';
+    final thumbnailUrl = data['thumbnailUrl'] ?? '';
+    final channelName = data['channelName'] ?? 'Unknown';
+    final description = data['description'] ?? '';
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) {
+      builder: (sheetContext) {
         return Container(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.7,
@@ -662,40 +673,71 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildBottomSheetItem(
-                        icon: Icons.watch_later_outlined,
-                        title: 'Save to Watch Later',
-                        onTap: () => Navigator.pop(context),
+                      // Download
+                      Consumer<DownloadProvider>(
+                        builder: (context, downloadProvider, child) {
+                          return FutureBuilder<bool>(
+                            future: downloadProvider.isVideoDownloaded(videoId),
+                            builder: (context, snapshot) {
+                              final isDownloaded = snapshot.data ?? false;
+                              return _buildBottomSheetItem(
+                                icon: isDownloaded ? Icons.download_done : Icons.download_outlined,
+                                title: isDownloaded ? 'Downloaded' : 'Download video',
+                                onTap: isDownloaded
+                                    ? () {
+                                        Navigator.pop(sheetContext);
+                                        SnackBarHelper.showSuccess(context, 'Already downloaded', icon: Icons.download_done);
+                                      }
+                                    : () {
+                                        Navigator.pop(sheetContext);
+                                        _showQualityPicker(context, videoId, videoTitle, videoUrl, thumbnailUrl, channelName, description);
+                                      },
+                                iconColor: isDownloaded ? Colors.green : null,
+                              );
+                            },
+                          );
+                        },
                       ),
+                      // Save to playlist
                       _buildBottomSheetItem(
                         icon: Icons.playlist_add,
                         title: 'Save to playlist',
-                        onTap: () => Navigator.pop(context),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          _showPlaylistPicker(context, videoId);
+                        },
                       ),
-                      _buildBottomSheetItem(
-                        icon: Icons.download_outlined,
-                        title: 'Download video',
-                        onTap: () => Navigator.pop(context),
-                      ),
+                      // Share
                       _buildBottomSheetItem(
                         icon: Icons.share_outlined,
                         title: 'Share',
-                        onTap: () => Navigator.pop(context),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          Share.share(
+                            'Check out this video: $videoTitle\n$videoUrl',
+                            subject: videoTitle,
+                          );
+                        },
+                      ),
+                      _buildBottomSheetItem(
+                        icon: Icons.watch_later_outlined,
+                        title: 'Save to Watch Later',
+                        onTap: () => Navigator.pop(sheetContext),
                       ),
                       _buildBottomSheetItem(
                         icon: Icons.not_interested_outlined,
                         title: 'Not interested',
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pop(sheetContext),
                       ),
                       _buildBottomSheetItem(
                         icon: Icons.block_outlined,
                         title: 'Don\'t recommend channel',
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pop(sheetContext),
                       ),
                       _buildBottomSheetItem(
                         icon: Icons.flag_outlined,
                         title: 'Report',
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pop(sheetContext),
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -713,7 +755,9 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
+    final color = iconColor ?? Colors.red;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -723,10 +767,10 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 18, color: Colors.red),
+              child: Icon(icon, size: 18, color: color),
             ),
             const SizedBox(width: 16),
             Text(
@@ -734,6 +778,82 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
               style: const TextStyle(fontSize: 15, color: Colors.white),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showQualityPicker(BuildContext context, String videoId, String title, String url, String thumbnail, String channelName, String description) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Download Quality', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 20),
+            ...[
+              ('360p', 'Small (~15 MB)', '360p'),
+              ('720p', 'Medium (~40 MB)', '720p'),
+              ('1080p', 'Large (~80 MB)', '1080p'),
+            ].map((q) => ListTile(
+              title: Text(q.$1, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              subtitle: Text(q.$2, style: TextStyle(color: Colors.grey[400])),
+              trailing: q.$1 == '720p' 
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: const Color(0xFF7B61FF), borderRadius: BorderRadius.circular(4)),
+                    child: const Text('Best', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                  )
+                : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await context.read<DownloadProvider>().downloadVideo(
+                  videoId: videoId, title: title, videoUrl: url, thumbnailUrl: thumbnail,
+                  quality: q.$3, isShort: false, channelName: channelName, description: description,
+                );
+                if (context.mounted) SnackBarHelper.showSuccess(context, 'Download started', icon: Icons.download);
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPlaylistPicker(BuildContext context, String videoId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => Consumer<PlaylistProvider>(
+        builder: (ctx, provider, _) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Save to Playlist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 20),
+              if (provider.playlists.isEmpty)
+                Text('No playlists yet', style: TextStyle(color: Colors.grey[400]))
+              else
+                ...provider.playlists.map((p) => ListTile(
+                  leading: Icon(Icons.playlist_play, color: Colors.grey[600]),
+                  title: Text(p.name, style: const TextStyle(color: Colors.white)),
+                  subtitle: Text('${p.videoIds.length} videos', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                  onTap: () async {
+                    await provider.addVideoToPlaylist(p.id, videoId);
+                    if (sheetCtx.mounted) {
+                      Navigator.pop(sheetCtx);
+                      SnackBarHelper.showSuccess(context, 'Added to ${p.name}', icon: Icons.playlist_add_check);
+                    }
+                  },
+                )),
+            ],
+          ),
         ),
       ),
     );

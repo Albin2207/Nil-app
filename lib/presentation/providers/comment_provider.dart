@@ -20,6 +20,7 @@ class CommentProvider extends ChangeNotifier {
     String? userId,
     String? userName,
     String? userAvatar,
+    String? replyToUsername,
   }) async {
     if (text.trim().isEmpty) return;
 
@@ -36,6 +37,8 @@ class CommentProvider extends ChangeNotifier {
       'likes': 0,
       'dislikes': 0,
       'parentId': parentId,
+      'replyToUsername': replyToUsername,
+      'isPinned': false,
     });
   }
 

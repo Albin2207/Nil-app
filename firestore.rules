@@ -87,5 +87,18 @@ service cloud.firestore {
       // No updates allowed (delete and recreate instead)
       allow update: if false;
     }
+    
+    // Reports collection
+    match /reports/{reportId} {
+      // Only authenticated users can read (for future admin panel)
+      allow read: if request.auth != null;
+      // Only authenticated users can create reports
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.reporterId;
+      // Only admins can update (future feature - for now, no one)
+      allow update: if false;
+      // Only admins can delete (future feature - for now, no one)
+      allow delete: if false;
+    }
   }
 }

@@ -10,6 +10,7 @@ import 'login_screen.dart';
 import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
 import 'creator_profile_screen.dart';
+import 'moderation_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -41,6 +42,79 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return count.toString();
+  }
+
+  Future<Map<String, int>> _getEngagementStats(String? userId) async {
+    if (userId == null) {
+      return {
+        'views': 0,
+        'likes': 0,
+        'comments': 0,
+        'shares': 0,
+      };
+    }
+
+    try {
+      int totalViews = 0;
+      int totalLikes = 0;
+      int totalComments = 0;
+      int totalShares = 0;
+
+      // Get all videos by this user
+      final videosSnapshot = await FirebaseFirestore.instance
+          .collection('videos')
+          .where('uploaderId', isEqualTo: userId)
+          .get();
+
+      for (var doc in videosSnapshot.docs) {
+        final data = doc.data();
+        totalViews += (data['viewsCount'] as int? ?? 0);
+        totalLikes += (data['likesCount'] as int? ?? 0);
+        totalShares += (data['sharesCount'] as int? ?? 0);
+        
+        // Count comments for this video
+        final commentsSnapshot = await FirebaseFirestore.instance
+            .collection('comments')
+            .where('videoId', isEqualTo: doc.id)
+            .get();
+        totalComments += commentsSnapshot.docs.length;
+      }
+
+      // Get all shorts by this user
+      final shortsSnapshot = await FirebaseFirestore.instance
+          .collection('shorts')
+          .where('uploaderId', isEqualTo: userId)
+          .get();
+
+      for (var doc in shortsSnapshot.docs) {
+        final data = doc.data();
+        totalViews += (data['viewsCount'] as int? ?? 0);
+        totalLikes += (data['likesCount'] as int? ?? 0);
+        totalShares += (data['sharesCount'] as int? ?? 0);
+        
+        // Count comments for this short
+        final commentsSnapshot = await FirebaseFirestore.instance
+            .collection('comments')
+            .where('videoId', isEqualTo: doc.id)
+            .get();
+        totalComments += commentsSnapshot.docs.length;
+      }
+
+      return {
+        'views': totalViews,
+        'likes': totalLikes,
+        'comments': totalComments,
+        'shares': totalShares,
+      };
+    } catch (e) {
+      debugPrint('Error getting engagement stats: $e');
+      return {
+        'views': 0,
+        'likes': 0,
+        'comments': 0,
+        'shares': 0,
+      };
+    }
   }
 
   // Fix negative counts (one-time use)
@@ -439,7 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           // Email - CENTERED
                           Text(
                             displayEmail,
-                            style: TextStyle(
+          style: TextStyle(
                               fontSize: 15,
                               color: Colors.grey[300],
                               letterSpacing: 0.3,
@@ -918,9 +992,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: () => _confirmDeleteContent(video.id, 'video'),
-              ),
-            ],
           ),
+        ],
+      ),
         ),
       ),
     );
@@ -1145,7 +1219,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       vertical: 8,
                     ),
                   ),
-                  child: const Text(
+              child: const Text(
                     'Subscribed',
               style: TextStyle(
                       fontSize: 13,
@@ -1176,59 +1250,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildSettingsTab(BuildContext context) {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
+    final hasContent = (user?.uploadedVideosCount ?? 0) > 0 || (user?.uploadedShortsCount ?? 0) > 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Fix Button (Hidden feature for fixing negative counts)
-        if ((user?.uploadedVideosCount ?? 0) < 0 || (user?.uploadedShortsCount ?? 0) < 0)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.build, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Fix Negative Counts',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Detected negative count. Tap to reset.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-            ),
-            const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => _fixNegativeCounts(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Fix Now'),
-                ),
-              ],
-            ),
-          ),
-        
-        // Account Info Section
-        const Text(
+        // Account Information Section
+            const Text(
           'Account Information',
-          style: TextStyle(
+              style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
@@ -1258,6 +1290,37 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         const SizedBox(height: 32),
 
+        // Your Channel Section
+        _buildYourChannelSection(context, user, hasContent),
+
+        const SizedBox(height: 32),
+
+        // Privacy Policy
+        _buildActionCard(
+          icon: Icons.privacy_tip_outlined,
+          title: 'Privacy Policy',
+          subtitle: 'View our privacy policy',
+          onTap: () {
+            // TODO: Navigate to privacy policy
+            SnackBarHelper.showInfo(context, 'Privacy Policy - Coming soon');
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        // Feedback
+        _buildActionCard(
+          icon: Icons.feedback_outlined,
+          title: 'Feedback & Report Issue',
+          subtitle: 'Help us improve the app',
+          onTap: () {
+            // TODO: Navigate to feedback form
+            SnackBarHelper.showInfo(context, 'Feedback form - Coming soon');
+          },
+        ),
+
+        const SizedBox(height: 32),
+
         // Danger Zone
         const Text(
           'Danger Zone',
@@ -1283,7 +1346,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 children: [
                   Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
                   SizedBox(width: 12),
-                  Text(
+            Text(
                     'Delete Account',
                     style: TextStyle(
                       fontSize: 16,
@@ -1294,7 +1357,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ],
               ),
               const SizedBox(height: 12),
-            Text(
+              Text(
                 'Permanently delete your account and all your content. This action cannot be undone.',
               style: TextStyle(
                 fontSize: 14,
@@ -1316,12 +1379,319 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       ],
+    );
+  }
+
+  Widget _buildYourChannelSection(BuildContext context, dynamic user, bool hasContent) {
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      backgroundColor: Colors.grey[900],
+      collapsedBackgroundColor: Colors.grey[900],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[800]!),
+      ),
+      collapsedShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[800]!),
+      ),
+      leading: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF7B61FF).withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.video_library, color: Color(0xFF7B61FF), size: 24),
+      ),
+      title: const Text(
+        'Your Channel',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+      subtitle: Text(
+        hasContent ? 'Manage your content & moderation' : 'Start creating content',
+        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+      ),
+      children: [
+        if (hasContent) ...[
+          // Channel Stats
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Channel Statistics',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Videos',
+                        '${user?.uploadedVideosCount ?? 0}',
+                        Icons.play_circle_outline,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Shorts',
+                        '${user?.uploadedShortsCount ?? 0}',
+                        Icons.short_text,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user?.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    int subscribersCount = 0;
+                    if (snapshot.hasData && snapshot.data != null) {
+                      final data = snapshot.data!.data() as Map<String, dynamic>?;
+                      subscribersCount = data?['subscribersCount'] ?? 0;
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Subscribers',
+                            _formatCount(subscribersCount),
+                            Icons.people_outline,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                // Engagement Stats
+                FutureBuilder<Map<String, int>>(
+                  future: _getEngagementStats(user?.uid),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF7B61FF),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      );
+                    }
+                    final stats = snapshot.data!;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Engagement',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                'Total Views',
+                                _formatCount(stats['views'] ?? 0),
+                                Icons.visibility_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                'Total Likes',
+                                _formatCount(stats['likes'] ?? 0),
+                                Icons.thumb_up_outlined,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                'Comments',
+                                _formatCount(stats['comments'] ?? 0),
+                                Icons.comment_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                'Shares',
+                                _formatCount(stats['shares'] ?? 0),
+                                Icons.share_outlined,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+            // Moderation Link
+            ListTile(
+              leading: const Icon(Icons.shield_outlined, color: Colors.orange),
+              title: const Text(
+                'Moderation',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                'Manage reported comments',
+                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ModerationScreen(),
+                  ),
+                );
+              },
+            ),
+        ] else ...[
+          // No content yet
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Icon(Icons.video_library_outlined, size: 48, color: Colors.grey[600]),
+                const SizedBox(height: 12),
+                Text(
+                  'No content yet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Start uploading videos or shorts to manage your channel',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[800]!),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: const Color(0xFF7B61FF), size: 20),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[400],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[800]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
+          ],
+        ),
+      ),
     );
   }
 

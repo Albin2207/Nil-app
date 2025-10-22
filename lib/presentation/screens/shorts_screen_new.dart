@@ -307,6 +307,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
       builder: (context) => ShortCommentsSheet(
         shortId: widget.short.id,
         commentsCount: widget.short.commentsCount,
+        videoOwnerId: widget.short.uploadedBy ?? '',
       ),
     ).then((_) {
       // Resume video when closing comments (only if this is the current page)

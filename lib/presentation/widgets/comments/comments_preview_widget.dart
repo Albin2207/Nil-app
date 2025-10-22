@@ -7,10 +7,12 @@ import 'comments_bottom_sheet.dart';
 
 class CommentsPreviewWidget extends StatelessWidget {
   final String videoId;
+  final String videoOwnerId;
 
   const CommentsPreviewWidget({
     super.key,
     required this.videoId,
+    required this.videoOwnerId,
   });
 
   void _openCommentsBottomSheet(BuildContext context) {
@@ -22,7 +24,10 @@ class CommentsPreviewWidget extends StatelessWidget {
       enableDrag: true,
       useSafeArea: true,
       transitionAnimationController: null,
-      builder: (context) => CommentsBottomSheet(videoId: videoId),
+      builder: (context) => CommentsBottomSheet(
+        videoId: videoId,
+        videoOwnerId: videoOwnerId,
+      ),
     );
   }
 

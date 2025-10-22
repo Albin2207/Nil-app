@@ -9,11 +9,13 @@ import 'short_reply_dialog.dart';
 class ShortCommentsSheet extends StatefulWidget {
   final String shortId;
   final int commentsCount;
+  final String videoOwnerId;
 
   const ShortCommentsSheet({
     super.key,
     required this.shortId,
     required this.commentsCount,
+    required this.videoOwnerId,
   });
 
   @override
@@ -224,6 +226,7 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
                           key: ValueKey(comment.id),
                           comment: comment,
                           shortId: widget.shortId,
+                          videoOwnerId: widget.videoOwnerId,
                           onReply: () async {
                             FocusManager.instance.primaryFocus?.unfocus();
                             await Future.delayed(const Duration(milliseconds: 200));
@@ -249,6 +252,7 @@ class _ShortCommentsSheetState extends State<ShortCommentsSheet> {
                             key: ValueKey(reply.id),
                             comment: reply,
                             shortId: widget.shortId,
+                            videoOwnerId: widget.videoOwnerId,
                             onReply: () {}, // No reply to reply
                             onDelete: () async {
                               FocusManager.instance.primaryFocus?.unfocus();
