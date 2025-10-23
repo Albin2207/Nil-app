@@ -1,32 +1,88 @@
-# # NilStream - YouTube-Style Video Streaming App
+# NIL App
 
-A modern video streaming app built with Flutter that provides a YouTube-like experience for your users.
+A modern video-sharing platform built with Flutter, featuring full-length videos, short-form content, and comprehensive social engagement features.
 
-## ✨ Features
+## Features
 
-- 🎥 **Professional Video Player** - Powered by Chewie with fullscreen support, seek controls, and smooth playback
-- 👍👎 **Like/Dislike System** - Real-time updates with user preference persistence
-- 💬 **Comments Section** - Post and view comments in real-time
-- 📱 **Responsive UI** - Beautiful, modern interface inspired by YouTube
-- 🔄 **Related Videos** - Automatic recommendations below each video
-- 📤 **Share Functionality** - Share videos with friends
-- 🔔 **Subscribe Feature** - Subscribe to channels
-- 📊 **View Tracking** - Automatic view count increment
-- 🎨 **Material Design** - Clean, modern UI with smooth animations
+### 🎥 Video Platform
+- **Regular Videos**: Upload and watch full-length videos with detailed metadata
+- **Shorts**: TikTok-style short-form vertical videos with swipe navigation
+- **Video Player**: Custom video player with play/pause, seek, quality selection, and fullscreen
+- **Downloads**: Offline viewing with quality options (360p, 480p, 720p, 1080p)
+- **Playlists**: Create and manage custom playlists
 
-## 🚀 Quick Start
+### 💬 Social Features
+- **YouTube-Style Comments**: Nested replies with expand/collapse functionality
+- **Engagement**: Like, dislike, share, and comment on videos
+- **User Profiles**: View channel statistics and content
+- **Subscriptions**: Subscribe to creators and track your subscriptions
+
+### 🛡️ Content Management
+- **Moderation Panel**: Creators can review and manage reported comments
+- **Content Reporting**: Users can report inappropriate comments
+- **Comment Actions**: Edit, delete, pin comments (with permissions)
+
+### 👤 User Features
+- **Authentication**: Google Sign-In and email/password authentication
+- **Profile Management**: Edit profile, change password, manage account
+- **Channel Statistics**: Videos, shorts, views, likes, comments, shares tracking
+- **Settings**: Privacy policy, feedback system, account settings
+
+### 📱 App Features
+- **Modern UI**: Clean, intuitive interface with smooth animations
+- **Dark Theme**: Eye-friendly dark mode
+- **Offline Support**: Download videos for offline viewing
+- **Search**: Find videos, shorts, and creators
+- **Share**: Share content via social media platforms
+
+## Tech Stack
+
+- **Framework**: Flutter 3.27.3
+- **Language**: Dart 3.6.0
+- **Backend**: Firebase
+  - Authentication (Google Sign-In, Email/Password)
+  - Cloud Firestore (Database)
+  - Firebase Storage (Video/Image storage)
+- **State Management**: Provider
+- **Video Player**: video_player package
+- **HTTP Client**: dio
+- **Local Storage**: sqflite, shared_preferences
+
+## Project Structure
+
+```
+lib/
+├── core/                       # Core utilities and services
+│   ├── constants/              # App-wide constants
+│   ├── di/                     # Dependency injection
+│   ├── navigation/             # Navigation/routing
+│   ├── services/               # App services
+│   ├── theme/                  # Theme configuration
+│   └── utils/                  # Helper utilities
+├── data/                       # Data layer
+│   ├── models/                 # Data models
+│   ├── repositories/           # Data repositories
+│   └── services/               # Firebase services
+├── presentation/               # UI layer
+│   ├── providers/              # State management
+│   ├── screens/                # App screens
+│   └── widgets/                # Reusable widgets
+└── main.dart                   # App entry point
+```
+
+## Setup Instructions
 
 ### Prerequisites
-
-- Flutter SDK (3.9.2 or higher)
-- Firebase project set up
-- Cloudinary account for video hosting
+- Flutter SDK (3.27.3 or higher)
+- Dart SDK (3.6.0 or higher)
+- Firebase project configured
+- Android Studio / Xcode (for mobile development)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone <repository-url>
    cd nil_app
    ```
 
@@ -35,136 +91,116 @@ A modern video streaming app built with Flutter that provides a YouTube-like exp
    flutter pub get
    ```
 
-3. **Configure Firebase**
-   - Add your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
-   - Firebase is already configured in the app
+3. **Firebase Configuration**
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Add Android and iOS apps to your Firebase project
+   - Download and place configuration files:
+     - Android: `google-services.json` → `android/app/`
+     - iOS: `GoogleService-Info.plist` → `ios/Runner/`
+   - Run FlutterFire CLI to generate `firebase_options.dart`:
+     ```bash
+     flutterfire configure
+     ```
 
-4. **Deploy Firestore Rules**
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
+4. **Android Signing** (for release builds)
+   - Create `android/key.properties` with your keystore details:
+     ```
+     storePassword=<your-password>
+     keyPassword=<your-password>
+     keyAlias=<your-alias>
+     storeFile=<path-to-keystore>
+     ```
+   - Place your keystore file in `android/app/`
 
 5. **Run the app**
    ```bash
+   # Development
    flutter run
+
+   # Release build
+   flutter build apk --release
+   flutter build appbundle --release
    ```
 
-## 📚 Documentation
+## Firebase Collections
 
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Complete setup instructions and feature overview
-- **[FIREBASE_DATA_STRUCTURE.md](FIREBASE_DATA_STRUCTURE.md)** - Firestore database schema
-- **[CLOUDINARY_GUIDE.md](CLOUDINARY_GUIDE.md)** - How to upload videos to Cloudinary
-- **[SAMPLE_VIDEO_DATA.json](SAMPLE_VIDEO_DATA.json)** - Sample data templates
+- **users**: User profiles and settings
+- **videos**: Full-length video metadata
+- **shorts**: Short-form video metadata
+- **comments**: Comments and nested replies
+- **reports**: Content moderation reports
+- **playlists**: User-created playlists
 
-## 🎯 Key Technologies
+## Firestore Security Rules
 
-- **Flutter** - Cross-platform mobile framework
-- **Firebase Firestore** - Real-time NoSQL database
-- **Cloudinary** - Video hosting and CDN
-- **Chewie** - Advanced video player
-- **Provider** - State management
-- **SharedPreferences** - Local data persistence
-
-## 📱 App Structure
-
-```
-lib/
-├── main.dart                 # App entry point
-├── models/                   # Data models
-├── providers/                # State management
-├── screens/
-│   ├── home_screen.dart      # Main feed
-│   ├── video_playing_screen.dart  # Video player & details
-│   └── ...
-└── widgets/                  # Reusable components
+Deploy the security rules:
+```bash
+firebase deploy --only firestore:rules
 ```
 
-## 🔥 Firebase Collections
-
-### videos (Collection)
-```
-videos/{videoId}
-├── title: String
-├── description: String
-├── videoUrl: String
-├── thumbnailUrl: String
-├── channelName: String
-├── channelAvatar: String
-├── duration: Number
-├── views: Number
-├── likes: Number
-├── dislikes: Number
-├── subscribers: Number
-└── timestamp: Timestamp
+Deploy indexes:
+```bash
+firebase deploy --only firestore:indexes
 ```
 
-### comments (Subcollection)
+## Building for Production
+
+### Android (AAB for Play Store)
+```bash
+flutter build appbundle --release
 ```
-videos/{videoId}/comments/{commentId}
-├── text: String
-├── username: String
-├── userAvatar: String
-├── timestamp: Timestamp
-└── likes: Number
+Output: `build/app/outputs/bundle/release/app-release.aab`
+
+### Android (APK)
+```bash
+flutter build apk --release
+```
+Output: `build/app/outputs/flutter-apk/app-release.apk`
+
+### iOS
+```bash
+flutter build ios --release
 ```
 
-## 🎬 Adding Videos
+## Version Information
 
-### Method 1: Manual (Firebase Console)
-1. Upload video to Cloudinary
-2. Go to Firebase Console > Firestore
-3. Add document to `videos` collection
-4. Fill in all required fields (see FIREBASE_DATA_STRUCTURE.md)
+- **Current Version**: 1.1.0 (Build 4)
+- **Min SDK**: Android 21 (Lollipop)
+- **Target SDK**: Android 34
 
-### Method 2: Quick Test
-Use the sample URLs from `SAMPLE_VIDEO_DATA.json` for testing
+## Dependencies
 
-## 🛠️ Customization
+Key packages:
+- `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`
+- `provider` - State management
+- `video_player` - Video playback
+- `image_picker` - Image/video selection
+- `dio` - HTTP client
+- `sqflite` - Local database
+- `share_plus` - Share functionality
+- `url_launcher` - Open external URLs
+- `cached_network_image` - Image caching
 
-### Change App Name
-Edit `lib/screens/home_screen.dart` line 33
+See `pubspec.yaml` for complete list.
 
-### Change Colors
-Replace `Colors.red` throughout the app with your brand color
+## Contributing
 
-### Add Authentication
-See SETUP_GUIDE.md for instructions on adding Firebase Auth
+1. Follow the existing code structure
+2. Use Provider for state management
+3. Keep widgets small and reusable
+4. Add comments for complex logic
+5. Test on both Android and iOS
 
-## 📸 Screenshots
+## Support
 
-(Add your app screenshots here)
+For issues or questions:
+- Email: nilapp01@gmail.com
+- Use the in-app Feedback feature
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## 🆘 Support
-
-If you encounter any issues:
-1. Check the [SETUP_GUIDE.md](SETUP_GUIDE.md)
-2. Verify your Firebase configuration
-3. Ensure Cloudinary URLs are accessible
-4. Check Flutter console for errors
-
-## 🎉 What's Next?
-
-- [ ] Add user authentication
-- [ ] Implement video upload from app
-- [ ] Create admin panel
-- [ ] Add search functionality
-- [ ] Implement playlists
-- [ ] Add video quality selection
-- [ ] Enable offline downloads
-- [ ] Push notifications for new videos
-
-## 👨‍💻 Author
-
-Your Name - [@yourhandle](https://twitter.com/yourhandle)
+All rights reserved. Proprietary software.
 
 ---
 
-**Built with ❤️ using Flutter**
+Built with ❤️ using Flutter

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/format_helper.dart';
-import '../../screens/video_playing_screen.dart';
+import '../../screens/home/video_playing_screen.dart';
 
 class RelatedVideosWidget extends StatelessWidget {
   final String currentVideoId;
