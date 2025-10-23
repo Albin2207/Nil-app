@@ -119,14 +119,9 @@ class _HomeScreenState extends State<HomeScreen> {
             : Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.red.withValues(alpha: 0.3),
-                          Colors.red.withValues(alpha: 0.1),
-                        ],
-                      ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -135,10 +130,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.play_circle_filled,
-                      color: Colors.red,
-                      size: 28,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/nil_app_icon-removebg-preview.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.red.withValues(alpha: 0.3),
+                                  Colors.red.withValues(alpha: 0.1),
+                                ],
+                              ),
+                            ),
+                            child: const Icon(Icons.play_circle_filled, color: Colors.red, size: 20),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -674,28 +684,22 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                   child: Column(
                     children: [
                       // Download
-                      Consumer<DownloadProvider>(
-                        builder: (context, downloadProvider, child) {
-                          return FutureBuilder<bool>(
-                            future: downloadProvider.isVideoDownloaded(videoId),
-                            builder: (context, snapshot) {
-                              final isDownloaded = snapshot.data ?? false;
-                              return _buildBottomSheetItem(
-                                icon: isDownloaded ? Icons.download_done : Icons.download_outlined,
-                                title: isDownloaded ? 'Downloaded' : 'Download video',
-                                onTap: isDownloaded
-                                    ? () {
-                                        Navigator.pop(sheetContext);
-                                        SnackBarHelper.showSuccess(context, 'Already downloaded', icon: Icons.download_done);
-                                      }
-                                    : () {
-                                        Navigator.pop(sheetContext);
-                                        _showQualityPicker(context, videoId, videoTitle, videoUrl, thumbnailUrl, channelName, description);
-                                      },
-                                iconColor: isDownloaded ? Colors.green : null,
-                              );
-                            },
-                          );
+                      _buildBottomSheetItem(
+                        icon: Icons.download_outlined,
+                        title: 'Download video',
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          final downloadProvider = context.read<DownloadProvider>();
+                          final isDownloaded = await downloadProvider.isVideoDownloaded(videoId);
+                          if (isDownloaded) {
+                            if (context.mounted) {
+                              SnackBarHelper.showSuccess(context, 'Already downloaded', icon: Icons.download_done);
+                            }
+                          } else {
+                            if (context.mounted) {
+                              _showQualityPicker(context, videoId, videoTitle, videoUrl, thumbnailUrl, channelName, description);
+                            }
+                          }
                         },
                       ),
                       // Save to playlist
@@ -811,11 +815,21 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
               onTap: () async {
                 Navigator.pop(ctx);
-                await context.read<DownloadProvider>().downloadVideo(
-                  videoId: videoId, title: title, videoUrl: url, thumbnailUrl: thumbnail,
-                  quality: q.$3, isShort: false, channelName: channelName, description: description,
-                );
-                if (context.mounted) SnackBarHelper.showSuccess(context, 'Download started', icon: Icons.download);
+                if (context.mounted) {
+                  _showDownloadProgress(context);
+                  final success = await context.read<DownloadProvider>().downloadVideo(
+                    videoId: videoId, title: title, videoUrl: url, thumbnailUrl: thumbnail,
+                    quality: q.$3, isShort: false, channelName: channelName, description: description,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close progress dialog
+                    if (success) {
+                      SnackBarHelper.showSuccess(context, 'Download complete!', icon: Icons.download_done);
+                    } else {
+                      SnackBarHelper.showError(context, 'Download failed', icon: Icons.error);
+                    }
+                  }
+                }
               },
             )),
           ],
@@ -854,6 +868,50 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 )),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showDownloadProgress(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: Consumer<DownloadProvider>(
+          builder: (context, provider, child) {
+            final progress = provider.downloadProgress;
+            return Dialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.download_outlined, size: 48, color: Color(0xFF7B61FF)),
+                    const SizedBox(height: 16),
+                    Text(
+                      progress > 0 ? 'Downloading...' : 'Preparing...',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 20),
+                    CircularProgressIndicator(
+                      value: progress > 0 ? progress : null,
+                      color: const Color(0xFF7B61FF),
+                      backgroundColor: Colors.grey[800],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

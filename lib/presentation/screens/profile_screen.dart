@@ -11,6 +11,8 @@ import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
 import 'creator_profile_screen.dart';
 import 'moderation_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'feedback_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -1301,8 +1303,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           title: 'Privacy Policy',
           subtitle: 'View our privacy policy',
           onTap: () {
-            // TODO: Navigate to privacy policy
-            SnackBarHelper.showInfo(context, 'Privacy Policy - Coming soon');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+            );
           },
         ),
 
@@ -1314,8 +1318,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           title: 'Feedback & Report Issue',
           subtitle: 'Help us improve the app',
           onTap: () {
-            // TODO: Navigate to feedback form
-            SnackBarHelper.showInfo(context, 'Feedback form - Coming soon');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+            );
           },
         ),
 

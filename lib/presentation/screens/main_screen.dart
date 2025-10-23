@@ -62,7 +62,10 @@ class _MainScreenState extends State<MainScreen> {
       // Show toast message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Press back again to exit'),
+          content: const Text(
+            'Press back again to exit',
+            style: TextStyle(color: Colors.white),
+          ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.grey[900],
