@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import '../../../providers/tmdb_provider.dart';
-import '../../../../data/models/movie_tmdb_model.dart';
+import '../providers/tmdb_provider.dart';
+import '../../data/models/movie_tmdb_model.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   final int movieId;

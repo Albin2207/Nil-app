@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../../../core/utils/snackbar_helper.dart';
-import '../home/video_playing_screen.dart';
+import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../../core/utils/snackbar_helper.dart';
+import 'video_playing_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
   final String creatorId;

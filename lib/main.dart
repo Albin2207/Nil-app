@@ -14,7 +14,7 @@ import 'presentation/providers/download_provider.dart';
 import 'presentation/providers/playlist_provider.dart';
 import 'presentation/providers/subscription_provider.dart';
 import 'core/services/connectivity_service.dart';
-import 'presentation/screens/initialization/splash_screen.dart';
+import 'presentation/screens/splash_screen.dart';
 import 'data/models/downloaded_video.dart';
 import 'data/models/playlist_model.dart';
 

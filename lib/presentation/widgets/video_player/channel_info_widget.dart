@@ -5,7 +5,7 @@ import '../../../core/utils/format_helper.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/subscription_provider.dart';
-import '../../screens/creator/creator_profile_screen.dart';
+import '../../screens/creator_profile_screen.dart';
 
 class ChannelInfoWidget extends StatelessWidget {
   final String channelName;

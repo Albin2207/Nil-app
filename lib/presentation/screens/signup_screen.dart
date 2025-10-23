@@ -1,61 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../../widgets/auth/custom_text_field.dart';
-import '../../widgets/auth/auth_button.dart';
-import '../../widgets/auth/google_sign_in_button.dart';
-import '../initialization/main_screen.dart';
-import 'signup_screen.dart';
-import 'forgot_password_screen.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/auth/custom_text_field.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/google_sign_in_button.dart';
+import 'login_screen.dart';
+import 'main_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
     
-    final success = await authProvider.signIn(
+    final success = await authProvider.signUp(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
+      name: _nameController.text.trim(),
     );
 
     if (!mounted) return;
 
     if (success) {
-      // Load user's subscriptions
-      if (authProvider.firebaseUser != null) {
-        final subscriptionProvider = context.read<SubscriptionProvider>();
-        await subscriptionProvider.loadSubscriptions(authProvider.firebaseUser!.uid);
-      }
-      
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+      );
     } else {
-      _showError(authProvider.errorMessage ?? 'Login failed');
+      _showError(authProvider.errorMessage ?? 'Sign up failed');
     }
   }
 
@@ -67,18 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Load user's subscriptions
-      if (authProvider.firebaseUser != null) {
-        final subscriptionProvider = context.read<SubscriptionProvider>();
-        await subscriptionProvider.loadSubscriptions(authProvider.firebaseUser!.uid);
-      }
-      
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+      );
     } else if (authProvider.errorMessage != null) {
       _showError(authProvider.errorMessage!);
     }
@@ -106,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 
                 // Logo
                 Center(
@@ -152,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Title
                 const Text(
-                  'Welcome Back!',
+                  'Create Account',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -163,14 +151,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 
                 Text(
-                  'Login to continue',
+                  'Sign up to get started',
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 16,
                   ),
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
+                
+                // Name field
+                CustomTextField(
+                  controller: _nameController,
+                  hintText: 'Full Name',
+                  prefixIcon: Icons.person_outlined,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your name';
+                    }
+                    if (value.length < 3) {
+                      return 'Name must be at least 3 characters';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
                 
                 // Email field
                 CustomTextField(
@@ -198,8 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: 'Password',
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _handleLogin(),
+                  textInputAction: TextInputAction.next,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -213,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
+                      return 'Please enter a password';
                     }
                     if (value.length < 6) {
                       return 'Password must be at least 6 characters';
@@ -222,36 +228,46 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-                      );
-                    },
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
+                // Confirm Password field
+                CustomTextField(
+                  controller: _confirmPasswordController,
+                  hintText: 'Confirm Password',
+                  prefixIcon: Icons.lock_outlined,
+                  obscureText: _obscureConfirmPassword,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _handleSignup(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      color: Colors.grey[600],
                     ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 
-                // Login button
+                // Sign up button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return AuthButton(
-                      text: 'Login',
-                      onPressed: _handleLogin,
+                      text: 'Sign Up',
+                      onPressed: _handleSignup,
                       isLoading: authProvider.isLoading,
                     );
                   },
@@ -288,23 +304,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 32),
                 
-                // Sign up link
+                // Login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      'Already have an account? ',
                       style: TextStyle(color: Colors.grey[400]),
                     ),
                     TextButton(
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (_) => const SignupScreen()),
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
                         );
                       },
                       child: const Text(
-                        'Sign Up',
+                        'Login',
                         style: TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,

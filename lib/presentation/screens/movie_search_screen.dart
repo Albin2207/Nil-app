@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../providers/tmdb_provider.dart';
-import '../../../../data/models/movie_tmdb_model.dart';
+import '../providers/tmdb_provider.dart';
+import '../../data/models/movie_tmdb_model.dart';
 import 'movie_details_screen.dart';
 
 class MovieSearchScreen extends StatefulWidget {

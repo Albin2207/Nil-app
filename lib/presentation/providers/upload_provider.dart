@@ -4,6 +4,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
 
 enum UploadType { video, short }
 
@@ -97,6 +98,10 @@ class UploadProvider extends ChangeNotifier {
       _uploadProgress = 0.8;
       notifyListeners();
 
+      // Get video duration
+      print('📊 Extracting video duration...');
+      final int videoDuration = await _getVideoDuration(videoFile.path);
+
       // Save metadata to Firestore
       final collection = uploadType == UploadType.video ? 'videos' : 'shorts';
       final docRef = FirebaseFirestore.instance.collection(collection).doc();
@@ -114,7 +119,7 @@ class UploadProvider extends ChangeNotifier {
         'likes': 0,
         'dislikes': 0,
         'timestamp': FieldValue.serverTimestamp(),
-        'duration': 0, 
+        'duration': videoDuration, // Automatically calculated duration
       });
 
       // Update user's upload count
@@ -179,6 +184,25 @@ class UploadProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error generating thumbnail: $e');
       return null;
+    }
+  }
+
+  /// Get video duration in seconds
+  Future<int> _getVideoDuration(String videoPath) async {
+    try {
+      print('⏱️ Calculating video duration...');
+      final VideoPlayerController controller = VideoPlayerController.file(File(videoPath));
+      
+      await controller.initialize();
+      final duration = controller.value.duration.inSeconds;
+      
+      await controller.dispose();
+      
+      print('✅ Video duration: $duration seconds');
+      return duration;
+    } catch (e) {
+      print('❌ Error getting video duration: $e');
+      return 0; // Fallback to 0 if duration extraction fails
     }
   }
 }

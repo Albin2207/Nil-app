@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../../data/models/video_model.dart';
-import '../../providers/video_provider.dart';
-import '../../widgets/video_player/video_player_widget.dart';
-import '../../widgets/video_player/video_info_widget.dart';
-import '../../widgets/video_player/action_buttons_widget.dart';
-import '../../widgets/video_player/channel_info_widget.dart';
-import '../../widgets/video_player/description_widget.dart';
-import '../../widgets/comments/comments_preview_widget.dart';
-import '../../widgets/video_player/related_videos_widget.dart';
+import '../../data/models/video_model.dart';
+import '../providers/video_provider.dart';
+import '../widgets/video_player/video_player_widget.dart';
+import '../widgets/video_player/video_info_widget.dart';
+import '../widgets/video_player/action_buttons_widget.dart';
+import '../widgets/video_player/channel_info_widget.dart';
+import '../widgets/video_player/description_widget.dart';
+import '../widgets/comments/comments_preview_widget.dart';
+import '../widgets/video_player/related_videos_widget.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final QueryDocumentSnapshot video;

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../../core/utils/snackbar_helper.dart';
-import '../../../data/models/report_model.dart';
-import '../../../data/models/comment_model.dart';
-import '../../../data/models/user_model.dart';
+import '../providers/auth_provider.dart';
+import '../../core/utils/snackbar_helper.dart';
+import '../../data/models/report_model.dart';
+import '../../data/models/comment_model.dart';
+import '../../data/models/user_model.dart';
 
 class ModerationScreen extends StatefulWidget {
   const ModerationScreen({super.key});

@@ -21,6 +21,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with TickerProvid
   late Animation<double> _fadeAnimation;
   bool _isInitialized = false;
   bool _hasError = false;
+  bool _is2xSpeed = false;
+  double _normalSpeed = 1.0;
 
   @override
   void initState() {
@@ -176,6 +178,25 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with TickerProvid
     }
   }
 
+  void _enableSpeedBoost() {
+    if (_videoPlayerController.value.isInitialized) {
+      _normalSpeed = _videoPlayerController.value.playbackSpeed;
+      _videoPlayerController.setPlaybackSpeed(2.0);
+      setState(() {
+        _is2xSpeed = true;
+      });
+    }
+  }
+
+  void _disableSpeedBoost() {
+    if (_videoPlayerController.value.isInitialized) {
+      _videoPlayerController.setPlaybackSpeed(_normalSpeed);
+      setState(() {
+        _is2xSpeed = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -245,7 +266,72 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with TickerProvid
         opacity: _fadeAnimation,
         child: AspectRatio(
           aspectRatio: _videoPlayerController.value.aspectRatio,
-          child: Chewie(controller: _chewieController!),
+          child: GestureDetector(
+            onLongPressStart: (_) {
+              print('🎬 Long press START');
+              _enableSpeedBoost();
+            },
+            onLongPressEnd: (_) {
+              print('🎬 Long press END');
+              _disableSpeedBoost();
+            },
+            onLongPressCancel: () {
+              print('🎬 Long press CANCEL');
+              _disableSpeedBoost();
+            },
+            child: Stack(
+              children: [
+                Chewie(controller: _chewieController!),
+                
+                // 2x Speed Indicator
+                if (_is2xSpeed)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: AnimatedOpacity(
+                      opacity: _is2xSpeed ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.fast_forward,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              '2x',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       );
     }

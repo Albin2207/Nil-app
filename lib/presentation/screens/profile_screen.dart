@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:nil_app/core/utils/snackbar_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../data/models/subscription_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../auth/login_screen.dart';
-import '../creator/creator_profile_screen.dart';
-import '../settings/feedback_screen.dart';
-import '../settings/moderation_screen.dart';
-import '../settings/privacy_policy_screen.dart';
-import '../shorts/shorts_screen_new.dart';
-import '../home/video_playing_screen.dart';
+import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../../data/models/subscription_model.dart';
+import 'login_screen.dart';
+import 'video_playing_screen.dart';
+import 'shorts_screen_new.dart';
+import 'creator_profile_screen.dart';
+import 'moderation_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'feedback_screen.dart';
+import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,8 +22,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -49,7 +48,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<Map<String, int>> _getEngagementStats(String? userId) async {
     if (userId == null) {
-      return {'views': 0, 'likes': 0, 'comments': 0, 'shares': 0};
+      return {
+        'views': 0,
+        'likes': 0,
+        'comments': 0,
+        'shares': 0,
+      };
     }
 
     try {
@@ -69,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         totalViews += (data['viewsCount'] as int? ?? 0);
         totalLikes += (data['likesCount'] as int? ?? 0);
         totalShares += (data['sharesCount'] as int? ?? 0);
-
+        
         // Count comments for this video
         final commentsSnapshot = await FirebaseFirestore.instance
             .collection('comments')
@@ -89,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         totalViews += (data['viewsCount'] as int? ?? 0);
         totalLikes += (data['likesCount'] as int? ?? 0);
         totalShares += (data['sharesCount'] as int? ?? 0);
-
+        
         // Count comments for this short
         final commentsSnapshot = await FirebaseFirestore.instance
             .collection('comments')
@@ -106,7 +110,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       };
     } catch (e) {
       debugPrint('Error getting engagement stats: $e');
-      return {'views': 0, 'likes': 0, 'comments': 0, 'shares': 0};
+      return {
+        'views': 0,
+        'likes': 0,
+        'comments': 0,
+        'shares': 0,
+      };
     }
   }
 
@@ -114,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _fixNegativeCounts(BuildContext context) async {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.firebaseUser?.uid;
-
+    
     if (userId == null) return;
 
     try {
@@ -131,14 +140,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (context.mounted) {
-        SnackBarHelper.showError(context, 'Error: $e');
+        SnackBarHelper.showError(
+          context,
+          'Error: $e',
+        );
       }
     }
   }
 
   Future<void> _handleLogout(BuildContext context) async {
     final authProvider = context.read<AuthProvider>();
-
+    
     final shouldLogout = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
@@ -186,7 +198,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               Text(
                 'Are you sure you want to logout?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[400], fontSize: 15),
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 24),
               Row(
@@ -281,20 +296,17 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             SizedBox(height: 8),
             Text('• Your profile', style: TextStyle(color: Colors.white70)),
-            Text(
-              '• All uploaded videos',
-              style: TextStyle(color: Colors.white70),
-            ),
-            Text(
-              '• All uploaded shorts',
-              style: TextStyle(color: Colors.white70),
-            ),
+            Text('• All uploaded videos', style: TextStyle(color: Colors.white70)),
+            Text('• All uploaded shorts', style: TextStyle(color: Colors.white70)),
             Text('• Your comments', style: TextStyle(color: Colors.white70)),
             Text('• Your playlists', style: TextStyle(color: Colors.white70)),
             SizedBox(height: 16),
             Text(
               'Are you absolutely sure?',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -322,8 +334,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) =>
-            const Center(child: CircularProgressIndicator(color: Colors.red)),
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(color: Colors.red),
+        ),
       );
     }
 
@@ -359,7 +372,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       // Show success and navigate to login
       if (context.mounted) {
-        SnackBarHelper.showSuccess(context, 'Account deleted successfully');
+        SnackBarHelper.showSuccess(
+          context,
+          'Account deleted successfully',
+        );
 
         Navigator.pushAndRemoveUntil(
           context,
@@ -373,7 +389,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       // Show error
       if (context.mounted) {
-        SnackBarHelper.showError(context, 'Error deleting account: $e');
+        SnackBarHelper.showError(
+          context,
+          'Error deleting account: $e',
+        );
       }
     }
   }
@@ -396,7 +415,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 );
               }
             });
-
+            
             return const Center(
               child: CircularProgressIndicator(color: Colors.red),
             );
@@ -432,7 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Column(
                         children: [
                           const SizedBox(height: 16),
-
+                          
                           // Profile Picture - CENTERED & BIGGER
                           TweenAnimationBuilder(
                             duration: const Duration(milliseconds: 600),
@@ -445,15 +464,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Container(
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.red,
-                                        width: 4,
-                                      ),
+                                      border: Border.all(color: Colors.red, width: 4),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.red.withValues(
-                                            alpha: 0.6 * value,
-                                          ),
+                                          color: Colors.red.withValues(alpha: 0.6 * value),
                                           blurRadius: 28,
                                           spreadRadius: 4,
                                         ),
@@ -462,14 +476,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     child: CircleAvatar(
                                       radius: 55,
                                       backgroundColor: Colors.grey[800],
-                                      backgroundImage: photoUrl != null
-                                          ? NetworkImage(photoUrl)
+                                      backgroundImage: photoUrl != null 
+                                          ? NetworkImage(photoUrl) 
                                           : null,
                                       child: photoUrl == null
                                           ? Text(
-                                              displayName.isNotEmpty
-                                                  ? displayName[0].toUpperCase()
-                                                  : '?',
+                                              displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
                                               style: const TextStyle(
                                                 fontSize: 40,
                                                 fontWeight: FontWeight.bold,
@@ -483,9 +495,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                               );
                             },
                           ),
-
+                          
                           const SizedBox(height: 20),
-
+                          
                           // Name - CENTERED & BIGGER
                           Text(
                             displayName,
@@ -497,28 +509,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             textAlign: TextAlign.center,
                           ),
-
+                          
                           const SizedBox(height: 8),
-
+                          
                           // Email - CENTERED
                           Text(
                             displayEmail,
-                            style: TextStyle(
+          style: TextStyle(
                               fontSize: 15,
                               color: Colors.grey[300],
                               letterSpacing: 0.3,
                             ),
                             textAlign: TextAlign.center,
                           ),
-
+                          
                           const SizedBox(height: 24),
-
+                          
                           // Stats Row with Glass Effect
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 20,
-                              horizontal: 24,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(16),
@@ -537,10 +546,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                _buildStat(
-                                  'Videos',
-                                  user?.uploadedVideosCount ?? 0,
-                                ),
+                                _buildStat('Videos', user?.uploadedVideosCount ?? 0),
                                 Container(
                                   height: 48,
                                   width: 2,
@@ -556,42 +562,31 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     ),
                                   ),
                                 ),
-                                _buildStat(
-                                  'Shorts',
-                                  user?.uploadedShortsCount ?? 0,
-                                ),
+                                _buildStat('Shorts', user?.uploadedShortsCount ?? 0),
                               ],
                             ),
                           ),
-
+                          
                           const SizedBox(height: 20),
-
+                          
                           // Logout Button - CENTERED
                           ElevatedButton.icon(
                             onPressed: () => _handleLogout(context),
                             icon: const Icon(Icons.logout, size: 18),
                             label: const Text('Logout'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.withValues(
-                                alpha: 0.2,
-                              ),
+                              backgroundColor: Colors.red.withValues(alpha: 0.2),
                               foregroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 30,
-                                vertical: 11,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 11),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
-                                side: BorderSide(
-                                  color: Colors.red.withValues(alpha: 0.5),
-                                  width: 1,
-                                ),
+                                side: BorderSide(color: Colors.red.withValues(alpha: 0.5), width: 1),
                               ),
                             ),
                           ),
-
+                          
                           const SizedBox(height: 16),
-
+                          
                           // Scroll Indicator - For All Content Below
                           TweenAnimationBuilder(
                             duration: const Duration(milliseconds: 1500),
@@ -611,7 +606,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       const SizedBox(height: 4),
                                       Text(
                                         'Scroll to see your content',
-                                        style: TextStyle(
+          style: TextStyle(
                                           fontSize: 11,
                                           color: Colors.grey[400],
                                           fontWeight: FontWeight.w500,
@@ -625,12 +620,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                             onEnd: () {
                               // Loop animation by rebuilding
                               if (mounted) {
-                                Future.delayed(
-                                  const Duration(milliseconds: 100),
-                                  () {
-                                    if (mounted) setState(() {});
-                                  },
-                                );
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  if (mounted) setState(() {});
+                                });
                               }
                             },
                           ),
@@ -639,7 +631,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                   ),
-
+                  
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _SliverTabBarDelegate(
@@ -694,8 +686,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                   count.toString(),
                   style: const TextStyle(
                     fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
                     letterSpacing: 1,
                   ),
                 ),
@@ -729,74 +721,71 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.red.withValues(alpha: 0.15),
-                    Colors.red.withValues(alpha: 0.05),
-                  ],
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.red.withValues(alpha: 0.15),
+                  Colors.red.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.3),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  spreadRadius: 1,
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.3),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildChannelStat(
+                  'Videos',
+                  user?.uploadedVideosCount ?? 0,
+                  Icons.play_circle_outline,
+                ),
+                Container(
                   width: 1,
+                  height: 40,
+                  color: Colors.red.withValues(alpha: 0.3),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.red.withValues(alpha: 0.2),
-                    blurRadius: 15,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildChannelStat(
-                    'Videos',
-                    user?.uploadedVideosCount ?? 0,
-                    Icons.play_circle_outline,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.red.withValues(alpha: 0.3),
-                  ),
-                  _buildChannelStat(
-                    'Shorts',
-                    user?.uploadedShortsCount ?? 0,
-                    Icons.video_library_outlined,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.red.withValues(alpha: 0.3),
-                  ),
-                  Consumer<SubscriptionProvider>(
-                    builder: (context, subscriptionProvider, child) {
-                      return StreamBuilder<int>(
-                        stream: subscriptionProvider.getSubscriberCountStream(
-                          userId,
-                        ),
-                        builder: (context, snapshot) {
-                          final count =
-                              snapshot.data ?? (user?.subscribersCount ?? 0);
-                          return _buildChannelStat(
-                            'Subscribers',
-                            count,
-                            Icons.people_outline,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
+                _buildChannelStat(
+                  'Shorts',
+                  user?.uploadedShortsCount ?? 0,
+                  Icons.video_library_outlined,
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.red.withValues(alpha: 0.3),
+                ),
+                Consumer<SubscriptionProvider>(
+                  builder: (context, subscriptionProvider, child) {
+                    return StreamBuilder<int>(
+                      stream: subscriptionProvider.getSubscriberCountStream(userId),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data ?? (user?.subscribersCount ?? 0);
+                        return _buildChannelStat(
+                          'Subscribers',
+                          count,
+                          Icons.people_outline,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
             ),
           ),
-
+          
           // Sub-tabs for Videos and Shorts
           Container(
             color: Colors.black,
@@ -815,11 +804,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-
+          
           // Content
           Expanded(
             child: TabBarView(
-              children: [_buildVideosTab(userId), _buildShortsTab(userId)],
+              children: [
+                _buildVideosTab(userId),
+                _buildShortsTab(userId),
+              ],
             ),
           ),
         ],
@@ -842,7 +834,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         ),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[400],
+          ),
+        ),
       ],
     );
   }
@@ -954,10 +952,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   placeholder: (context, url) => Container(
                     color: Colors.grey[800],
                     child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.red,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
                     ),
                   ),
                   errorWidget: (context, url, error) => Container(
@@ -986,19 +981,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 8),
                     Text(
                       '${data['views'] ?? 0} views',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[400],
+                      ),
                     ),
                   ],
                 ),
               ),
 
               // Delete Button
-              IconButton(
+          IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: () => _confirmDeleteContent(video.id, 'video'),
-              ),
-            ],
           ),
+        ],
+      ),
         ),
       ),
     );
@@ -1011,7 +1009,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ShortsScreen()),
+          MaterialPageRoute(
+            builder: (context) => const ShortsScreen(),
+          ),
         );
       },
       child: Stack(
@@ -1025,10 +1025,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               placeholder: (context, url) => Container(
                 color: Colors.grey[800],
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.red,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
                 ),
               ),
               errorWidget: (context, url, error) => Container(
@@ -1088,11 +1085,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   color: Colors.black.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.red,
-                  size: 18,
-                ),
+                child: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
               ),
               onPressed: () => _confirmDeleteContent(short.id, 'short'),
             ),
@@ -1116,15 +1109,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
                 Icon(
                   Icons.subscriptions_outlined,
                   size: 80,
                   color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
                 Text(
                   'No subscriptions yet',
                   style: TextStyle(
@@ -1136,7 +1129,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 8),
                 Text(
                   'Subscribe to channels to see them here',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -1151,7 +1147,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           itemCount: subscriptions.length,
           itemBuilder: (context, index) {
             final subscription = subscriptions[index];
-
+            
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
@@ -1190,7 +1186,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     final count = snapshot.data ?? 0;
                     return Text(
                       '${_formatCount(count)} subscribers',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
                     );
                   },
                 ),
@@ -1200,7 +1199,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       userId: userId,
                       channelId: subscription.channelId,
                     );
-
+                    
                     if (success && mounted) {
                       SnackBarHelper.showInfo(
                         context,
@@ -1222,9 +1221,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       vertical: 8,
                     ),
                   ),
-                  child: const Text(
+              child: const Text(
                     'Subscribed',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 onTap: () {
@@ -1250,19 +1252,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildSettingsTab(BuildContext context) {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
-    final hasContent =
-        (user?.uploadedVideosCount ?? 0) > 0 ||
-        (user?.uploadedShortsCount ?? 0) > 0;
+    final hasContent = (user?.uploadedVideosCount ?? 0) > 0 || (user?.uploadedShortsCount ?? 0) > 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // Account Information Section
-        const Text(
+            const Text(
           'Account Information',
-          style: TextStyle(
+              style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
@@ -1305,9 +1305,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const PrivacyPolicyScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
             );
           },
         ),
@@ -1352,13 +1350,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               const Row(
                 children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.red,
-                    size: 24,
-                  ),
+                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
                   SizedBox(width: 12),
-                  Text(
+            Text(
                     'Delete Account',
                     style: TextStyle(
                       fontSize: 16,
@@ -1371,7 +1365,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 12),
               Text(
                 'Permanently delete your account and all your content. This action cannot be undone.',
-                style: TextStyle(fontSize: 14, color: Colors.grey[300]),
+              style: TextStyle(
+                fontSize: 14,
+                  color: Colors.grey[300],
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -1388,20 +1385,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
       ],
     );
   }
 
-  Widget _buildYourChannelSection(
-    BuildContext context,
-    dynamic user,
-    bool hasContent,
-  ) {
+  Widget _buildYourChannelSection(BuildContext context, dynamic user, bool hasContent) {
     return ExpansionTile(
       tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       backgroundColor: Colors.grey[900],
@@ -1420,11 +1413,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: const Color(0xFF7B61FF).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(
-          Icons.video_library,
-          color: Color(0xFF7B61FF),
-          size: 24,
-        ),
+        child: const Icon(Icons.video_library, color: Color(0xFF7B61FF), size: 24),
       ),
       title: const Text(
         'Your Channel',
@@ -1435,9 +1424,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
       subtitle: Text(
-        hasContent
-            ? 'Manage your content & moderation'
-            : 'Start creating content',
+        hasContent ? 'Manage your content & moderation' : 'Start creating content',
         style: TextStyle(fontSize: 12, color: Colors.grey[400]),
       ),
       children: [
@@ -1485,8 +1472,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   builder: (context, snapshot) {
                     int subscribersCount = 0;
                     if (snapshot.hasData && snapshot.data != null) {
-                      final data =
-                          snapshot.data!.data() as Map<String, dynamic>?;
+                      final data = snapshot.data!.data() as Map<String, dynamic>?;
                       subscribersCount = data?['subscribersCount'] ?? 0;
                     }
                     return Row(
@@ -1578,45 +1564,34 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           const Divider(height: 1),
-          // Moderation Link
-          ListTile(
-            leading: const Icon(Icons.shield_outlined, color: Colors.orange),
-            title: const Text(
-              'Moderation',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
+            // Moderation Link
+            ListTile(
+              leading: const Icon(Icons.shield_outlined, color: Colors.orange),
+              title: const Text(
+                'Moderation',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
               ),
+              subtitle: Text(
+                'Manage reported comments',
+                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ModerationScreen(),
+                  ),
+                );
+              },
             ),
-            subtitle: Text(
-              'Manage reported comments',
-              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-            ),
-            trailing: const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey,
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ModerationScreen(),
-                ),
-              );
-            },
-          ),
         ] else ...[
           // No content yet
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(
-                  Icons.video_library_outlined,
-                  size: 48,
-                  color: Colors.grey[600],
-                ),
+                Icon(Icons.video_library_outlined, size: 48, color: Colors.grey[600]),
                 const SizedBox(height: 12),
                 Text(
                   'No content yet',
@@ -1657,7 +1632,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[400],
+            ),
+          ),
         ],
       ),
     );
@@ -1705,7 +1686,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
                   ),
                 ],
               ),
@@ -1746,7 +1730,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   title,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[400],
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1755,11 +1742,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                     fontSize: 16,
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
         ],
       ),
     );
@@ -1804,14 +1791,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         final authProvider = context.read<AuthProvider>();
         final userId = authProvider.firebaseUser?.uid;
         if (userId != null) {
-          final userRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId);
+          final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
           final userDoc = await userRef.get();
-
+          
           if (userDoc.exists) {
             final data = userDoc.data() as Map<String, dynamic>;
-
+            
             if (type == 'video') {
               final currentCount = data['uploadedVideosCount'] ?? 0;
               if (currentCount > 0) {
@@ -1838,7 +1823,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         }
       } catch (e) {
         if (mounted) {
-          SnackBarHelper.showError(context, 'Error deleting $type: $e');
+          SnackBarHelper.showError(
+            context,
+            'Error deleting $type: $e',
+          );
         }
       }
     }
@@ -1846,18 +1834,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -1876,12 +1854,11 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(color: Colors.black, child: tabBar);
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.black,
+      child: tabBar,
+    );
   }
 
   @override
