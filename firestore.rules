@@ -90,15 +90,15 @@ service cloud.firestore {
     
     // Reports collection
     match /reports/{reportId} {
-      // Only authenticated users can read (for future admin panel)
+      // Only authenticated users can read (for moderation panel)
       allow read: if request.auth != null;
       // Only authenticated users can create reports
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.reporterId;
-      // Only admins can update (future feature - for now, no one)
-      allow update: if false;
-      // Only admins can delete (future feature - for now, no one)
-      allow delete: if false;
+      // Allow authenticated users to update status (for moderation)
+      allow update: if request.auth != null;
+      // Allow authenticated users to delete (for moderation)
+      allow delete: if request.auth != null;
     }
   }
 }

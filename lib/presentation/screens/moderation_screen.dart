@@ -15,7 +15,7 @@ class ModerationScreen extends StatefulWidget {
 }
 
 class _ModerationScreenState extends State<ModerationScreen> {
-  String _selectedFilter = 'all'; // all, pending, resolved
+  String _selectedFilter = 'all'; // all, resolved
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +51,6 @@ class _ModerationScreenState extends State<ModerationScreen> {
             child: Row(
               children: [
                 _buildFilterChip('All', 'all'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Pending', 'pending'),
                 const SizedBox(width: 8),
                 _buildFilterChip('Resolved', 'resolved'),
               ],
@@ -143,18 +141,18 @@ class _ModerationScreenState extends State<ModerationScreen> {
   }
 
   Stream<QuerySnapshot> _getReportsStream(String currentUserId) {
-    Query query = FirebaseFirestore.instance
-        .collection('reports')
-        .where('contentOwnerId', isEqualTo: currentUserId)
-        .orderBy('reportedAt', descending: true);
-
-    if (_selectedFilter == 'pending') {
-      query = query.where('status', isEqualTo: 'pending');
-    } else if (_selectedFilter == 'resolved') {
-      query = query.where('status', isEqualTo: 'resolved');
+    if (_selectedFilter == 'resolved') {
+      return FirebaseFirestore.instance
+          .collection('reports')
+          .where('status', isEqualTo: 'resolved')
+          .snapshots();
+    } else {
+      // 'all' - show only pending/unresolved
+      return FirebaseFirestore.instance
+          .collection('reports')
+          .where('status', isEqualTo: 'pending')
+          .snapshots();
     }
-
-    return query.snapshots();
   }
 
   Widget _buildReportCard(ReportModel report, String reportId, String currentUserId) {
@@ -258,45 +256,109 @@ class _ModerationScreenState extends State<ModerationScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Comment Details
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('comments')
-                  .doc(report.commentId)
-                  .get(),
-              builder: (context, commentSnapshot) {
-                if (!commentSnapshot.hasData) {
-                  return const Text(
-                    'Loading comment...',
-                    style: TextStyle(color: Colors.grey),
-                  );
-                }
-
-                if (!commentSnapshot.data!.exists) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[850],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
+            // Content Details (different for each type)
+            if (report.type == 'video' || report.type == 'short')
+              // Video/Short Report
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[850],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[700]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(Icons.delete_outline, color: Colors.grey[600], size: 18),
+                        Icon(
+                          report.type == 'video' ? Icons.videocam : Icons.video_library,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Comment has been deleted',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[500],
-                            fontStyle: FontStyle.italic,
+                        Expanded(
+                          child: Text(
+                            report.contentTitle ?? 'Untitled ${report.type}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  );
-                }
+                    if (report.channelName != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.person, size: 14, color: Colors.grey[400]),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Channel: ${report.channelName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Content ID: ${report.contentId}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              )
+            else
+              // Comment Report
+              FutureBuilder<DocumentSnapshot>(
+                future: report.videoId != null && report.commentId != null
+                    ? FirebaseFirestore.instance
+                        .collection('videos')
+                        .doc(report.videoId)
+                        .collection('comments')
+                        .doc(report.commentId)
+                        .get()
+                    : Future.value(null),
+                builder: (context, commentSnapshot) {
+                  if (!commentSnapshot.hasData || commentSnapshot.data == null) {
+                    return const Text(
+                      'Loading comment...',
+                      style: TextStyle(color: Colors.grey),
+                    );
+                  }
 
-                final comment = CommentModel.fromFirestore(commentSnapshot.data!);
+                  if (!commentSnapshot.data!.exists) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[850],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.grey[600], size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Comment has been deleted',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final comment = CommentModel.fromFirestore(commentSnapshot.data!);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,14 +422,74 @@ class _ModerationScreenState extends State<ModerationScreen> {
               },
             ),
 
-            // Action buttons (only if pending)
-            if (report.status == 'pending') ...[
-              const SizedBox(height: 16),
+            // View Content Button
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade700, Colors.blue.shade500],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => _viewReportedContent(report),
+                icon: const Icon(Icons.play_circle_filled, size: 24),
+                label: Text(
+                  'View ${report.type == 'comment' ? 'Comment' : report.type == 'video' ? 'Video' : 'Short'}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+
+            // Action buttons
+            const SizedBox(height: 12),
+            if (report.status == 'resolved')
+              // Resolved indicator
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Report Resolved',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              // Action buttons for pending reports
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _dismissReport(reportId),
+                      onPressed: () => _deleteReport(reportId),
                       icon: const Icon(Icons.close, size: 18),
                       label: const Text('Dismiss'),
                       style: OutlinedButton.styleFrom(
@@ -380,9 +502,17 @@ class _ModerationScreenState extends State<ModerationScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _deleteComment(reportId, report.commentId),
+                      onPressed: () {
+                        if (report.type == 'comment' && report.commentId != null) {
+                          _deleteComment(reportId, report.commentId!, report.videoId);
+                        } else if (report.type == 'video') {
+                          _deleteVideo(reportId, report.contentId);
+                        } else if (report.type == 'short') {
+                          _deleteShort(reportId, report.contentId);
+                        }
+                      },
                       icon: const Icon(Icons.delete, size: 18),
-                      label: const Text('Delete Comment'),
+                      label: Text('Delete ${report.type == 'comment' ? 'Comment' : report.type[0].toUpperCase()}${report.type.substring(1)}'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
@@ -392,7 +522,6 @@ class _ModerationScreenState extends State<ModerationScreen> {
                   ),
                 ],
               ),
-            ],
           ],
         ),
       ),
@@ -421,28 +550,291 @@ class _ModerationScreenState extends State<ModerationScreen> {
     }
   }
 
-  Future<void> _dismissReport(String reportId) async {
+
+  void _viewReportedContent(ReportModel report) {
+    if (report.type == 'video') {
+      // Show video details
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text('Reported Video', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Title: ${report.contentTitle ?? 'Unknown'}',
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Channel: ${report.channelName ?? 'Unknown'}',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Video ID: ${report.contentId}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } else if (report.type == 'short') {
+      // Show short details
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text('Reported Short', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Title: ${report.contentTitle ?? 'Unknown'}',
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Channel: ${report.channelName ?? 'Unknown'}',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Short ID: ${report.contentId}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Comment - show in a dialog
+      SnackBarHelper.showInfo(context, 'Comment content is shown above', icon: Icons.info);
+    }
+  }
+
+  Future<void> _deleteReport(String reportId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Delete Report', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to permanently delete this report?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
+      await FirebaseFirestore.instance
+          .collection('reports')
+          .doc(reportId)
+          .delete();
+
+      if (mounted) {
+        SnackBarHelper.showSuccess(context, 'Report deleted', icon: Icons.delete);
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Failed to delete report: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteVideo(String reportId, String videoId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Delete Video', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to delete this video? This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Get video to find uploader
+      final videoDoc = await FirebaseFirestore.instance
+          .collection('videos')
+          .doc(videoId)
+          .get();
+      
+      final uploaderId = videoDoc.data()?['uploadedBy'];
+      
+      // Delete the video from Firestore
+      await FirebaseFirestore.instance
+          .collection('videos')
+          .doc(videoId)
+          .delete();
+
+      // Update uploader's video count
+      if (uploaderId != null) {
+        print('🔄 Decrementing video count for user: $uploaderId');
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uploaderId)
+            .update({
+          'uploadedVideosCount': FieldValue.increment(-1),
+        });
+        print('✅ Video count decremented');
+      } else {
+        print('⚠️ No uploader ID found, cannot decrement count');
+      }
+
+      // Mark report as resolved
       await FirebaseFirestore.instance
           .collection('reports')
           .doc(reportId)
           .update({
         'status': 'resolved',
         'resolvedAt': FieldValue.serverTimestamp(),
-        'action': 'dismissed',
+        'action': 'content_deleted',
       });
 
       if (mounted) {
-        SnackBarHelper.showSuccess(context, 'Report dismissed');
+        SnackBarHelper.showSuccess(context, 'Video deleted and report resolved', icon: Icons.check);
       }
     } catch (e) {
       if (mounted) {
-        SnackBarHelper.showError(context, 'Failed to dismiss report: $e');
+        SnackBarHelper.showError(context, 'Failed to delete video: $e');
       }
     }
   }
 
-  Future<void> _deleteComment(String reportId, String commentId) async {
+  Future<void> _deleteShort(String reportId, String shortId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Delete Short', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to delete this short? This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Get short to find uploader
+      final shortDoc = await FirebaseFirestore.instance
+          .collection('shorts')
+          .doc(shortId)
+          .get();
+      
+      final uploaderId = shortDoc.data()?['uploadedBy'];
+      
+      // Delete the short from Firestore
+      await FirebaseFirestore.instance
+          .collection('shorts')
+          .doc(shortId)
+          .delete();
+
+      // Update uploader's shorts count
+      if (uploaderId != null) {
+        print('🔄 Decrementing shorts count for user: $uploaderId');
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uploaderId)
+            .update({
+          'uploadedShortsCount': FieldValue.increment(-1),
+        });
+        print('✅ Shorts count decremented');
+      } else {
+        print('⚠️ No uploader ID found, cannot decrement shorts count');
+      }
+
+      // Mark report as resolved
+      await FirebaseFirestore.instance
+          .collection('reports')
+          .doc(reportId)
+          .update({
+        'status': 'resolved',
+        'resolvedAt': FieldValue.serverTimestamp(),
+        'action': 'content_deleted',
+      });
+
+      if (mounted) {
+        SnackBarHelper.showSuccess(context, 'Short deleted and report resolved', icon: Icons.check);
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Failed to delete short: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteComment(String reportId, String commentId, [String? videoId]) async {
+    // Get videoId from the report if not provided
+    if (videoId == null) {
+      final reportDoc = await FirebaseFirestore.instance
+          .collection('reports')
+          .doc(reportId)
+          .get();
+      videoId = reportDoc.data()?['videoId'];
+      
+      if (videoId == null) {
+        SnackBarHelper.showError(context, 'Cannot find video ID');
+        return;
+      }
+    }
+    
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -470,24 +862,26 @@ class _ModerationScreenState extends State<ModerationScreen> {
     if (confirmed != true) return;
 
     try {
-      // Delete the comment
+      // Delete the comment from the video's comments subcollection
       await FirebaseFirestore.instance
+          .collection('videos')
+          .doc(videoId!)
           .collection('comments')
           .doc(commentId)
           .delete();
 
-      // Update report status
+      // Mark report as resolved
       await FirebaseFirestore.instance
           .collection('reports')
           .doc(reportId)
           .update({
         'status': 'resolved',
         'resolvedAt': FieldValue.serverTimestamp(),
-        'action': 'comment_deleted',
+        'action': 'content_deleted',
       });
 
       if (mounted) {
-        SnackBarHelper.showSuccess(context, 'Comment deleted successfully');
+        SnackBarHelper.showSuccess(context, 'Comment deleted and report resolved', icon: Icons.check);
       }
     } catch (e) {
       if (mounted) {
@@ -496,4 +890,5 @@ class _ModerationScreenState extends State<ModerationScreen> {
     }
   }
 }
+
 

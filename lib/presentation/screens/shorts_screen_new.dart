@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -496,6 +497,14 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                   Icons.playlist_add,
                   'Playlist',
                   () => _showShortPlaylistPicker(context),
+                ),
+                const SizedBox(height: 24),
+                // More/Settings button
+                _buildActionButton(
+                  context,
+                  Icons.more_vert,
+                  'More',
+                  () => _showShortsSettings(context),
                 ),
               ],
             ),
@@ -1022,6 +1031,327 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
           ],
         ),
       ),
+    );
+  }
+
+  void _showShortsSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'More Options',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Description
+                ListTile(
+                  leading: const Icon(Icons.description, color: Colors.white),
+                  title: const Text('Description', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDescription(context);
+                  },
+                ),
+                
+                // Captions
+                ListTile(
+                  leading: const Icon(Icons.closed_caption, color: Colors.white),
+                  title: const Text('Captions', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    SnackBarHelper.showInfo(context, 'Captions coming soon!', icon: Icons.info);
+                  },
+                ),
+                
+                // Quality
+                ListTile(
+                  leading: const Icon(Icons.high_quality, color: Colors.white),
+                  title: const Text('Quality', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    SnackBarHelper.showInfo(context, 'Quality settings coming soon!', icon: Icons.info);
+                  },
+                ),
+                
+                const Divider(color: Colors.grey),
+                
+                // Not Interested
+                ListTile(
+                  leading: const Icon(Icons.not_interested, color: Colors.white),
+                  title: const Text('Not Interested', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    SnackBarHelper.showSuccess(context, 'We\'ll show you fewer shorts like this', icon: Icons.check);
+                  },
+                ),
+                
+                // Don't Recommend Channel
+                ListTile(
+                  leading: const Icon(Icons.block, color: Colors.white),
+                  title: const Text('Don\'t Recommend Channel', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showConfirmDontRecommend(context);
+                  },
+                ),
+                
+                // Report
+                ListTile(
+                  leading: const Icon(Icons.flag, color: Colors.white),
+                  title: const Text('Report', style: TextStyle(color: Colors.white)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showReportOptions(context);
+                  },
+                ),
+                
+                // Send Feedback
+                ListTile(
+                  leading: const Icon(Icons.feedback, color: Colors.white),
+                  title: const Text('Send Feedback', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/feedback');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDescription(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Description',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: SingleChildScrollView(
+                  child: Text(
+                    widget.short.description.isEmpty 
+                        ? 'No description provided.' 
+                        : widget.short.description,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showConfirmDontRecommend(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text('Don\'t Recommend Channel?', style: TextStyle(color: Colors.white)),
+          content: Text(
+            'You won\'t see shorts from ${widget.short.channelName} anymore.',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                SnackBarHelper.showSuccess(
+                  context,
+                  'Channel blocked from recommendations',
+                  icon: Icons.block,
+                );
+              },
+              child: const Text('Confirm', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showReportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Report Short',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ReportTile(
+                icon: Icons.copyright,
+                title: 'Copyright Violation',
+                onTap: () => _submitReport(context, 'Copyright Violation'),
+              ),
+              _ReportTile(
+                icon: Icons.warning,
+                title: 'Inappropriate Content',
+                onTap: () => _submitReport(context, 'Inappropriate Content'),
+              ),
+              _ReportTile(
+                icon: Icons.block,
+                title: 'Spam or Misleading',
+                onTap: () => _submitReport(context, 'Spam or Misleading'),
+              ),
+              _ReportTile(
+                icon: Icons.sentiment_dissatisfied,
+                title: 'Hate Speech or Harassment',
+                onTap: () => _submitReport(context, 'Hate Speech or Harassment'),
+              ),
+              _ReportTile(
+                icon: Icons.dangerous,
+                title: 'Violence or Dangerous Content',
+                onTap: () => _submitReport(context, 'Violence or Dangerous Content'),
+              ),
+              _ReportTile(
+                icon: Icons.report_problem,
+                title: 'Other',
+                onTap: () => _submitReport(context, 'Other'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _submitReport(BuildContext context, String reason) async {
+    Navigator.pop(context);
+    
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.firebaseUser?.uid;
+      
+      if (currentUserId == null) {
+        SnackBarHelper.showError(context, 'Please log in to report', icon: Icons.error);
+        return;
+      }
+      
+      await FirebaseFirestore.instance.collection('reports').add({
+        'type': 'short',
+        'contentId': widget.short.id,
+        'contentTitle': widget.short.title,
+        'channelName': widget.short.channelName,
+        'reason': reason,
+        'reporterId': currentUserId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+      });
+      
+      if (context.mounted) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Report submitted. We\'ll review it soon.',
+          icon: Icons.check_circle,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          'Failed to submit report',
+          icon: Icons.error,
+        );
+      }
+    }
+  }
+}
+
+class _ReportTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _ReportTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }

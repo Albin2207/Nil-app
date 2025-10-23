@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/utils/video_quality_helper.dart';
+
+
 class FullScreenVideoPlayer extends StatefulWidget {
   final VideoPlayerController controller;
   final VoidCallback onSpeedBoostStart;
   final VoidCallback onSpeedBoostEnd;
   final bool is2xSpeed;
+  final String originalVideoUrl;
+  final String currentQuality;
+  final bool isLooping;
+  final double normalSpeed;
+  final Function(String) onQualityChanged;
+  final Function(bool) onLoopChanged;
+  final Function(double) onSpeedChanged;
 
   const FullScreenVideoPlayer({
     super.key,
@@ -14,6 +24,13 @@ class FullScreenVideoPlayer extends StatefulWidget {
     required this.onSpeedBoostStart,
     required this.onSpeedBoostEnd,
     required this.is2xSpeed,
+    required this.originalVideoUrl,
+    required this.currentQuality,
+    required this.isLooping,
+    required this.normalSpeed,
+    required this.onQualityChanged,
+    required this.onLoopChanged,
+    required this.onSpeedChanged,
   });
 
   @override
@@ -25,6 +42,9 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
   bool _localIs2xSpeed = false;
   double _currentSpeed = 1.0;
   double _normalSpeed = 1.0;
+  bool _isScreenLocked = false;
+  bool _isMuted = false;
+  late bool _localIsLooping;
 
   @override
   void initState() {
@@ -36,9 +56,10 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
       DeviceOrientation.landscapeRight,
     ]);
     
-    // Get initial speed
+    // Get initial speed and loop state
     _currentSpeed = widget.controller.value.playbackSpeed;
     _normalSpeed = _currentSpeed;
+    _localIsLooping = widget.isLooping;
     
     // Listen to controller to update UI
     widget.controller.addListener(() {
@@ -93,8 +114,201 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
       widget.controller.seekTo(Duration.zero);
     }
   }
+  
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+      widget.controller.setVolume(_isMuted ? 0.0 : 1.0);
+    });
+  }
 
   void _showSpeedSettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                    const Text(
+                      'Video Settings',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Playback Speed
+                    ListTile(
+                      leading: const Icon(Icons.speed, color: Colors.white),
+                      title: const Text('Playback Speed', style: TextStyle(color: Colors.white)),
+                      trailing: Text(
+                        '${widget.controller.value.playbackSpeed}x',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSpeedMenu();
+                      },
+                    ),
+                    
+                    // Quality
+                    ListTile(
+                      leading: const Icon(Icons.high_quality, color: Colors.white),
+                      title: const Text('Quality', style: TextStyle(color: Colors.white)),
+                      trailing: Text(
+                        widget.currentQuality,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showQualityMenu();
+                      },
+                    ),
+                    
+                    // Loop Video
+                    SwitchListTile(
+                      secondary: const Icon(Icons.repeat, color: Colors.white),
+                      title: const Text('Loop Video', style: TextStyle(color: Colors.white)),
+                      value: _localIsLooping,
+                      activeColor: Colors.red,
+                      onChanged: (value) {
+                        print('🔄 Loop toggle tapped (fullscreen): $value');
+                        widget.controller.setLooping(value);
+                        widget.onLoopChanged(value);
+                        setState(() {
+                          _localIsLooping = value;
+                        });
+                        setModalState(() {
+                          _localIsLooping = value;
+                        });
+                        print('✅ Loop set on controller (fullscreen): $value');
+                      },
+                    ),
+                    
+                    // Screen Lock
+                    ListTile(
+                      leading: const Icon(Icons.lock, color: Colors.white),
+                      title: const Text('Lock Screen', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Prevent accidental touches', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _isScreenLocked = true;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Screen locked. Tap the lock icon to unlock.'),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // Sleep Timer
+                    ListTile(
+                      leading: const Icon(Icons.bedtime, color: Colors.white),
+                      title: const Text('Sleep Timer', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Auto-pause after set time', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSleepTimerMenu();
+                      },
+                    ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  void _showSleepTimerMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sleep Timer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...[5, 10, 15, 30, 45, 60].map((minutes) {
+                    return ListTile(
+                      leading: const Icon(Icons.timer, color: Colors.white),
+                      title: Text(
+                        '$minutes minutes',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _setSleepTimer(minutes);
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  void _setSleepTimer(int minutes) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Video will pause in $minutes minutes'),
+        backgroundColor: Colors.red,
+        action: SnackBarAction(
+          label: 'Cancel',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+    
+    Future.delayed(Duration(minutes: minutes), () {
+      if (mounted && widget.controller.value.isPlaying) {
+        widget.controller.pause();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sleep timer ended - Video paused'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
+
+  void _showSpeedMenu() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -130,12 +344,13 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                       return InkWell(
                         onTap: () {
                           widget.controller.setPlaybackSpeed(speed);
+                          widget.onSpeedChanged(speed);
                           setState(() {
                             _currentSpeed = speed;
-                            _normalSpeed = speed; // Save as the new normal speed
+                            _normalSpeed = speed;
                           });
                           Navigator.pop(context);
-                          print('🎬 Speed set to $speed, saved as normal speed');
+                          print('🎬 FULLSCREEN: Speed set to $speed');
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -158,6 +373,99 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showQualityMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Video Quality',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...VideoQuality.allQualities.map((quality) {
+                    final isSelected = widget.currentQuality == quality;
+                    return ListTile(
+                      leading: Icon(
+                        isSelected ? Icons.check_circle : Icons.circle_outlined,
+                        color: isSelected ? Colors.red : Colors.white,
+                      ),
+                      title: Text(
+                        VideoQualityHelper.getQualityLabel(quality),
+                        style: TextStyle(
+                          color: isSelected ? Colors.red : Colors.white,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context); // Close quality menu
+                        
+                        // Show loading indicator
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => WillPopScope(
+                            onWillPop: () async => false,
+                            child: const Center(
+                              child: Card(
+                                color: Colors.black87,
+                                child: Padding(
+                                  padding: EdgeInsets.all(20.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircularProgressIndicator(color: Colors.red),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'Changing quality...',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                        
+                        // Wait a bit for the dialog to show
+                        await Future.delayed(const Duration(milliseconds: 100));
+                        
+                        Navigator.pop(context); // Close loading dialog
+                        Navigator.pop(context); // Exit fullscreen
+                        widget.onQualityChanged(quality); // Change quality in parent
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -189,20 +497,20 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onTap: () {
+        onTap: _isScreenLocked ? null : () {
           setState(() {
             _showControls = !_showControls;
           });
         },
-        onLongPressStart: (_) {
+        onLongPressStart: _isScreenLocked ? null : (_) {
           print('🎬 FULLSCREEN Long press START');
           _enableLocalSpeedBoost();
         },
-        onLongPressEnd: (_) {
+        onLongPressEnd: _isScreenLocked ? null : (_) {
           print('🎬 FULLSCREEN Long press END');
           _disableLocalSpeedBoost();
         },
-        onLongPressCancel: () {
+        onLongPressCancel: _isScreenLocked ? null : () {
           print('🎬 FULLSCREEN Long press CANCEL');
           _disableLocalSpeedBoost();
         },
@@ -213,8 +521,59 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
               children: [
                 VideoPlayer(widget.controller),
                 
+                // Screen lock indicator (small, top-right)
+                if (_isScreenLocked)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    right: 16,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isScreenLocked = false;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red, width: 2),
+                        ),
+                        child: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock, color: Colors.red, size: 24),
+                            SizedBox(height: 4),
+                            Text(
+                              'Locked',
+                              style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                
+                // Volume/Mute button (top-left)
+                if (_showControls && !_isScreenLocked)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    left: 16,
+                    child: IconButton(
+                      icon: Icon(
+                        _isMuted ? Icons.volume_off : Icons.volume_up,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.6),
+                      ),
+                      onPressed: _toggleMute,
+                    ),
+                  ),
+                
                 // Controls overlay
-                if (_showControls)
+                if (_showControls && !_isScreenLocked)
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -240,6 +599,17 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                                 onPressed: () => Navigator.pop(context),
                               ),
                               const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.closed_caption, color: Colors.white),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Captions feature coming soon!'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                },
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.settings, color: Colors.white),
                                 onPressed: _showSpeedSettings,

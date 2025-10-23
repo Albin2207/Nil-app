@@ -8,6 +8,7 @@ import '../../../core/utils/snackbar_helper.dart';
 import '../../providers/video_provider.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/playlist_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../../data/models/video_model.dart';
 
 class ActionButtonsWidget extends StatefulWidget {
@@ -503,9 +504,137 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
               label: 'Save',
               onTap: () => _showPlaylistPicker(context),
             ),
+            const SizedBox(width: AppConstants.smallPadding),
+            _ActionButton(
+              icon: Icons.flag_outlined,
+              label: 'Report',
+              onTap: () => _showReportOptions(context),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showReportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Report Video',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ReportOption(
+                icon: Icons.copyright,
+                title: 'Copyright Violation',
+                onTap: () => _submitReport(context, 'Copyright Violation'),
+              ),
+              _ReportOption(
+                icon: Icons.warning,
+                title: 'Inappropriate Content',
+                onTap: () => _submitReport(context, 'Inappropriate Content'),
+              ),
+              _ReportOption(
+                icon: Icons.block,
+                title: 'Spam or Misleading',
+                onTap: () => _submitReport(context, 'Spam or Misleading'),
+              ),
+              _ReportOption(
+                icon: Icons.sentiment_dissatisfied,
+                title: 'Hate Speech or Harassment',
+                onTap: () => _submitReport(context, 'Hate Speech or Harassment'),
+              ),
+              _ReportOption(
+                icon: Icons.dangerous,
+                title: 'Violence or Dangerous Content',
+                onTap: () => _submitReport(context, 'Violence or Dangerous Content'),
+              ),
+              _ReportOption(
+                icon: Icons.report_problem,
+                title: 'Other',
+                onTap: () => _submitReport(context, 'Other'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _submitReport(BuildContext context, String reason) async {
+    Navigator.pop(context);
+    
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final currentUserId = authProvider.firebaseUser?.uid;
+      
+      if (currentUserId == null) {
+        SnackBarHelper.showError(context, 'Please log in to report', icon: Icons.error);
+        return;
+      }
+      
+      await FirebaseFirestore.instance.collection('reports').add({
+        'type': 'video',
+        'contentId': widget.videoId,
+        'contentTitle': widget.videoTitle,
+        'reason': reason,
+        'reporterId': currentUserId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+      });
+      
+      if (context.mounted) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Report submitted. We\'ll review it soon.',
+          icon: Icons.check_circle,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          'Failed to submit report',
+          icon: Icons.error,
+        );
+      }
+    }
+  }
+}
+
+class _ReportOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _ReportOption({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }

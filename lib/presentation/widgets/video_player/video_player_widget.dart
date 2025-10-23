@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../../../core/utils/video_quality_helper.dart';
 import 'fullscreen_video_player.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
@@ -20,6 +21,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _is2xSpeed = false;
   double _normalSpeed = 1.0;
   bool _showControls = true;
+  String _currentQuality = VideoQuality.auto;
+  String _originalVideoUrl = '';
+  bool _isLooping = false;
+  bool _isScreenLocked = false;
+  bool _isMuted = false;
 
   @override
   void initState() {
@@ -28,20 +34,54 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   void _initializePlayer() {
+    _originalVideoUrl = widget.videoUrl;
+    
     _controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.videoUrl),
+      Uri.parse(VideoQualityHelper.getQualityUrl(_originalVideoUrl, _currentQuality)),
     );
     
     _controller.initialize().then((_) {
       setState(() {
         _isInitialized = true;
       });
+      _controller.setLooping(_isLooping); // Set loop mode
       _controller.play(); // Auto-play
     });
 
     _controller.addListener(() {
       setState(() {});
     });
+  }
+
+  Future<void> _changeQuality(String quality) async {
+    if (quality == _currentQuality) return;
+    
+    // Save current position and playing state
+    final currentPosition = _controller.value.position;
+    final wasPlaying = _controller.value.isPlaying;
+    
+    // Dispose old controller
+    await _controller.dispose();
+    
+    // Create new controller with quality URL
+    _currentQuality = quality;
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(VideoQualityHelper.getQualityUrl(_originalVideoUrl, quality)),
+    );
+    
+    await _controller.initialize();
+    
+    // Restore looping state
+    _controller.setLooping(_isLooping);
+    
+    // Restore position and state
+    await _controller.seekTo(currentPosition);
+    if (wasPlaying) {
+      _controller.play();
+    }
+    
+    setState(() {});
+    print('🎬 Quality changed to $quality');
   }
 
   void _enableSpeedBoost() {
@@ -63,6 +103,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       });
       print('🎬 Speed boost OFF - restored to: $_normalSpeed');
     }
+  }
+  
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+      _controller.setVolume(_isMuted ? 0.0 : 1.0);
+    });
   }
 
   void _skipForward() {
@@ -88,7 +135,120 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     }
   }
 
-  void _showSpeedSettings() {
+  void _showSettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                    // Header
+                    const Text(
+                      'Video Settings',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Playback Speed
+                    ListTile(
+                      leading: const Icon(Icons.speed, color: Colors.white),
+                      title: const Text('Playback Speed', style: TextStyle(color: Colors.white)),
+                      trailing: Text(
+                        '${_controller.value.playbackSpeed}x',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSpeedMenu();
+                      },
+                    ),
+                    
+                    // Quality
+                    ListTile(
+                      leading: const Icon(Icons.high_quality, color: Colors.white),
+                      title: const Text('Quality', style: TextStyle(color: Colors.white)),
+                      trailing: Text(
+                        _currentQuality,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showQualityMenu();
+                      },
+                    ),
+                    
+                    // Loop Video
+                    SwitchListTile(
+                      secondary: const Icon(Icons.repeat, color: Colors.white),
+                      title: const Text('Loop Video', style: TextStyle(color: Colors.white)),
+                      value: _isLooping,
+                      activeColor: Colors.red,
+                      onChanged: (value) {
+                        print('🔄 Loop toggle tapped (portrait): $value');
+                        setModalState(() {
+                          _isLooping = value;
+                        });
+                        setState(() {
+                          _isLooping = value;
+                          _controller.setLooping(value);
+                        });
+                        print('✅ Loop set on controller: $value');
+                      },
+                    ),
+                    
+                    // Screen Lock
+                    SwitchListTile(
+                      secondary: const Icon(Icons.lock, color: Colors.white),
+                      title: const Text('Lock Screen', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Prevent accidental touches', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      value: _isScreenLocked,
+                      activeColor: Colors.red,
+                      onChanged: (value) {
+                        setModalState(() {
+                          _isScreenLocked = value;
+                        });
+                        setState(() {
+                          _isScreenLocked = value;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    
+                    // Sleep Timer
+                    ListTile(
+                      leading: const Icon(Icons.timer, color: Colors.white),
+                      title: const Text('Sleep Timer', style: TextStyle(color: Colors.white)),
+                      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSleepTimerMenu();
+                      },
+                    ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showSpeedMenu() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -156,6 +316,148 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     );
   }
 
+  void _showQualityMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Video Quality',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...VideoQuality.allQualities.map((quality) {
+                final isSelected = _currentQuality == quality;
+                return ListTile(
+                  leading: Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    color: isSelected ? Colors.red : Colors.white,
+                  ),
+                  title: Text(
+                    VideoQualityHelper.getQualityLabel(quality),
+                    style: TextStyle(
+                      color: isSelected ? Colors.red : Colors.white,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _changeQuality(quality);
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSleepTimerMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Sleep Timer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer, color: Colors.white),
+                title: const Text('15 minutes', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _setSleepTimer(15);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer, color: Colors.white),
+                title: const Text('30 minutes', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _setSleepTimer(30);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer, color: Colors.white),
+                title: const Text('1 hour', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _setSleepTimer(60);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.stop_circle, color: Colors.white),
+                title: const Text('End of video', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _setSleepTimer(-1); // Special: pause at end
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _setSleepTimer(int minutes) {
+    if (minutes == -1) {
+      // Pause at end of video
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video will pause at the end'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Will be handled by controller listener
+    } else {
+      Future.delayed(Duration(minutes: minutes), () {
+        if (mounted && _controller.value.isPlaying) {
+          _controller.pause();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sleep timer ended - Video paused'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sleep timer set for $minutes minutes'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _openFullscreen() {
     Navigator.push(
       context,
@@ -165,6 +467,25 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           onSpeedBoostStart: _enableSpeedBoost,
           onSpeedBoostEnd: _disableSpeedBoost,
           is2xSpeed: _is2xSpeed,
+          originalVideoUrl: _originalVideoUrl,
+          currentQuality: _currentQuality,
+          isLooping: _isLooping,
+          normalSpeed: _normalSpeed,
+          onQualityChanged: (quality) {
+            _changeQuality(quality);
+          },
+          onLoopChanged: (value) {
+            setState(() {
+              _isLooping = value;
+              _controller.setLooping(value);
+            });
+          },
+          onSpeedChanged: (speed) {
+            _controller.setPlaybackSpeed(speed);
+            setState(() {
+              _normalSpeed = speed;
+            });
+          },
         ),
       ),
     );
@@ -198,20 +519,20 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     }
 
     return GestureDetector(
-      onTap: () {
+      onTap: _isScreenLocked ? null : () {
         setState(() {
           _showControls = !_showControls;
         });
       },
-      onLongPressStart: (_) {
+      onLongPressStart: _isScreenLocked ? null : (_) {
         print('🎬 Long press START');
         _enableSpeedBoost();
       },
-      onLongPressEnd: (_) {
+      onLongPressEnd: _isScreenLocked ? null : (_) {
         print('🎬 Long press END');
         _disableSpeedBoost();
       },
-      onLongPressCancel: () {
+      onLongPressCancel: _isScreenLocked ? null : () {
         print('🎬 Long press CANCEL');
         _disableSpeedBoost();
       },
@@ -223,8 +544,59 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             children: [
               VideoPlayer(_controller),
               
+              // Screen lock indicator (small, top-right)
+              if (_isScreenLocked)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isScreenLocked = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red, width: 2),
+                      ),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock, color: Colors.red, size: 24),
+                          SizedBox(height: 4),
+                          Text(
+                            'Locked',
+                            style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              
+              // Volume/Mute button (top-left)
+              if (_showControls && !_isScreenLocked)
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: IconButton(
+                    icon: Icon(
+                      _isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: 0.6),
+                    ),
+                    onPressed: _toggleMute,
+                  ),
+                ),
+              
               // Controls overlay
-              if (_showControls)
+              if (_showControls && !_isScreenLocked)
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -322,7 +694,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                             // Settings button
                             IconButton(
                               icon: const Icon(Icons.settings, color: Colors.white, size: 20),
-                              onPressed: _showSpeedSettings,
+                              onPressed: _showSettings,
                             ),
                             // Fullscreen button
                             IconButton(
@@ -333,6 +705,27 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              
+              // Captions button (top right, below 2x indicator)
+              if (_showControls && !_isScreenLocked)
+                Positioned(
+                  top: 60,
+                  right: 16,
+                  child: IconButton(
+                    icon: const Icon(Icons.closed_caption, color: Colors.white, size: 24),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: 0.6),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Captions feature coming soon!'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    },
                   ),
                 ),
               

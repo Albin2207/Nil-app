@@ -30,10 +30,12 @@ class ReportService {
       // Create new report
       final report = ReportModel(
         id: '', // Will be auto-generated
+        type: 'comment',
         reporterId: reporterId,
         reportedUserId: reportedUserId,
         commentId: commentId,
         videoId: videoId,
+        contentId: commentId,
         reason: reason,
         commentText: commentText,
         timestamp: Timestamp.now(),
