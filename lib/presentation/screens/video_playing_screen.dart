@@ -100,7 +100,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                   SliverToBoxAdapter(
                     child: Stack(
                       children: [
-                        VideoPlayerWidget(videoUrl: _videoModel!.videoUrl),
+                        VideoPlayerWidget(
+                          videoUrl: _videoModel!.videoUrl,
+                          videoId: _videoModel!.id,
+                          title: _videoModel!.title,
+                          thumbnailUrl: _videoModel!.thumbnailUrl,
+                          channelName: _videoModel!.channelName,
+                          channelAvatar: _videoModel!.channelAvatar,
+                        ),
                         
                         // Back Button
                         Positioned(

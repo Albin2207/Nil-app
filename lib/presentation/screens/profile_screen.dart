@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../../data/models/subscription_model.dart';
+import '../widgets/settings_drawer.dart';
 import 'login_screen.dart';
 import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
@@ -16,7 +17,9 @@ import 'feedback_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int? initialTab;
+  
+  const ProfileScreen({super.key, this.initialTab});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,16 +27,38 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _scrollController = ScrollController();
+    
+    // Set initial tab if provided
+    if (widget.initialTab != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _tabController.animateTo(widget.initialTab!);
+          // Scroll down to show the tab content
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.animateTo(
+                300, // Scroll down to show tab content
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutCubic,
+              );
+            }
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -401,6 +426,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      drawer: const SettingsDrawer(),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final firebaseUser = authProvider.firebaseUser;
@@ -430,6 +456,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           return DefaultTabController(
             length: 3,
             child: NestedScrollView(
+              controller: _scrollController,
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   SliverToBoxAdapter(
@@ -448,11 +475,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                       ),
                       padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
-                      child: Column(
+                      child: Stack(
                         children: [
-                          const SizedBox(height: 16),
-                          
-                          // Profile Picture - CENTERED & BIGGER
+                          Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              
+                              // Profile Picture - CENTERED & BIGGER
                           TweenAnimationBuilder(
                             duration: const Duration(milliseconds: 600),
                             tween: Tween<double>(begin: 0, end: 1),
@@ -627,6 +656,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             },
                           ),
                           const SizedBox(height: 12),
+                            ],
+                          ),
+                          
+                          // Settings gear icon positioned in top left
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            child: IconButton(
+                              icon: const Icon(Icons.settings, color: Colors.white, size: 28),
+                              onPressed: () => Scaffold.of(context).openDrawer(),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -649,7 +690,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         tabs: const [
                           Tab(text: 'Your Account'),
                           Tab(text: 'Subscriptions'),
-                          Tab(text: 'Settings'),
+                          Tab(text: 'Account Info'),
                         ],
                       ),
                     ),
@@ -1289,41 +1330,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             subtitle: _formatDate(user!.lastLogin!),
           ),
         ],
-
-        const SizedBox(height: 32),
-
-        // Your Channel Section
-        _buildYourChannelSection(context, user, hasContent),
-
-        const SizedBox(height: 32),
-
-        // Privacy Policy
-        _buildActionCard(
-          icon: Icons.privacy_tip_outlined,
-          title: 'Privacy Policy',
-          subtitle: 'View our privacy policy',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
-            );
-          },
-        ),
-
-        const SizedBox(height: 12),
-
-        // Feedback
-        _buildActionCard(
-          icon: Icons.feedback_outlined,
-          title: 'Feedback & Report Issue',
-          subtitle: 'Help us improve the app',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const FeedbackScreen()),
-            );
-          },
-        ),
 
         const SizedBox(height: 32),
 

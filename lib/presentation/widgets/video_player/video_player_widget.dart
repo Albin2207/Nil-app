@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/utils/video_quality_helper.dart';
+import '../../../core/services/watch_history_service.dart';
 import 'fullscreen_video_player.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
+  final String? videoId;
+  final String? title;
+  final String? thumbnailUrl;
+  final String? channelName;
+  final String? channelAvatar;
 
   const VideoPlayerWidget({
     super.key,
     required this.videoUrl,
+    this.videoId,
+    this.title,
+    this.thumbnailUrl,
+    this.channelName,
+    this.channelAvatar,
   });
 
   @override
@@ -26,6 +37,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _isLooping = false;
   bool _isScreenLocked = false;
   bool _isMuted = false;
+  bool _hasTrackedWatchHistory = false;
 
   @override
   void initState() {
@@ -50,6 +62,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
     _controller.addListener(() {
       setState(() {});
+      _trackWatchHistory();
     });
   }
 
@@ -59,6 +72,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     // Save current position and playing state
     final currentPosition = _controller.value.position;
     final wasPlaying = _controller.value.isPlaying;
+    final currentSpeed = _controller.value.playbackSpeed;
     
     // Dispose old controller
     await _controller.dispose();
@@ -71,16 +85,29 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     
     await _controller.initialize();
     
-    // Restore looping state
+    // IMPORTANT: Re-add listener to keep UI updating
+    _controller.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    
+    // Restore all states
     _controller.setLooping(_isLooping);
+    _controller.setPlaybackSpeed(currentSpeed);
+    _controller.setVolume(_isMuted ? 0.0 : 1.0);
     
     // Restore position and state
     await _controller.seekTo(currentPosition);
     if (wasPlaying) {
-      _controller.play();
+      await _controller.play();
     }
     
-    setState(() {});
+    // Force rebuild to update aspect ratio
+    if (mounted) {
+      setState(() {});
+    }
+    
     print('🎬 Quality changed to $quality');
   }
 
@@ -778,5 +805,44 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         ),
       ),
     );
+  }
+
+  void _trackWatchHistory() {
+    if (!_isInitialized || 
+        widget.videoId == null || 
+        widget.title == null || 
+        widget.thumbnailUrl == null || 
+        widget.channelName == null || 
+        widget.channelAvatar == null) {
+      return;
+    }
+
+    final position = _controller.value.position;
+    final duration = _controller.value.duration;
+    
+    // Only track if video has been playing for at least 5 seconds
+    if (position.inSeconds >= 5) {
+      if (!_hasTrackedWatchHistory) {
+        // First time tracking - add to watch history
+        WatchHistoryService.addToWatchHistory(
+          contentId: widget.videoId!,
+          contentType: 'video',
+          title: widget.title!,
+          thumbnailUrl: widget.thumbnailUrl!,
+          channelName: widget.channelName!,
+          channelAvatar: widget.channelAvatar!,
+          watchDuration: position,
+          totalDuration: duration,
+        );
+        _hasTrackedWatchHistory = true;
+      } else {
+        // Update existing watch history
+        WatchHistoryService.updateWatchProgress(
+          contentId: widget.videoId!,
+          watchDuration: position,
+          totalDuration: duration,
+        );
+      }
+    }
   }
 }

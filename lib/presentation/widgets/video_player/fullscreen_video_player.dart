@@ -423,43 +423,46 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
-                      onTap: () async {
-                        Navigator.pop(context); // Close quality menu
+                      onTap: () {
+                        if (isSelected) {
+                          Navigator.pop(context); // Already this quality
+                          return;
+                        }
                         
-                        // Show loading indicator
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (ctx) => WillPopScope(
-                            onWillPop: () async => false,
-                            child: const Center(
-                              child: Card(
-                                color: Colors.black87,
-                                child: Padding(
-                                  padding: EdgeInsets.all(20.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      CircularProgressIndicator(color: Colors.red),
-                                      SizedBox(height: 16),
-                                      Text(
-                                        'Changing quality...',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ],
+                        Navigator.pop(context); // Close quality menu
+                        Navigator.pop(context); // Exit fullscreen to avoid controller issues
+                        
+                        // Change quality in parent (portrait mode is safer)
+                        widget.onQualityChanged(quality);
+                        
+                        // Show a helpful message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Text('Changing to $quality...'),
+                              ],
+                            ),
+                            backgroundColor: Colors.black87,
+                            duration: const Duration(seconds: 2),
+                            action: SnackBarAction(
+                              label: 'Fullscreen',
+                              textColor: Colors.red,
+                              onPressed: () {
+                                // User can quickly go back to fullscreen
+                              },
                             ),
                           ),
                         );
-                        
-                        // Wait a bit for the dialog to show
-                        await Future.delayed(const Duration(milliseconds: 100));
-                        
-                        Navigator.pop(context); // Close loading dialog
-                        Navigator.pop(context); // Exit fullscreen
-                        widget.onQualityChanged(quality); // Change quality in parent
                       },
                     );
                   }).toList(),

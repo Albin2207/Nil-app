@@ -208,8 +208,8 @@ class _CreateScreenState extends State<CreateScreen> {
                                   const Icon(
                                     Icons.cloud_upload,
                                     size: 40,
-                                    color: Colors.red,
-                                  ),
+                color: Colors.red,
+              ),
                                 ],
                               ),
                               const SizedBox(height: 28),
@@ -221,9 +221,9 @@ class _CreateScreenState extends State<CreateScreen> {
                                   color: Colors.white,
                                   letterSpacing: 0.5,
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
+            ),
+            const SizedBox(height: 12),
+            Text(
                                 '${(uploadProvider.uploadProgress * 100).toInt()}%',
                                 style: TextStyle(
                                   fontSize: 32,
@@ -239,7 +239,7 @@ class _CreateScreenState extends State<CreateScreen> {
                                   fontSize: 14,
                                   color: Colors.grey[400],
                                 ),
-                                textAlign: TextAlign.center,
+              textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -457,9 +457,9 @@ class _CreateScreenState extends State<CreateScreen> {
                                   ),
                                 ),
                               ],
-                            ),
-                          ],
-                        ),
+            ),
+          ],
+        ),
                       ),
                     );
                   },

@@ -10,6 +10,7 @@ import '../providers/playlist_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/services/watch_history_service.dart';
 import '../../core/utils/format_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
@@ -180,6 +181,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
   bool _isInitialized = false;
   bool _hasIncrementedView = false;
   bool _showPlayPauseIcon = false;
+  bool _hasTrackedWatchHistory = false;
 
   @override
   void initState() {
@@ -226,6 +228,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
         if (mounted && _controller.value.hasError) {
           setState(() {});
         }
+        _trackWatchHistory();
       });
     } catch (e) {
       print('Error initializing video: $e');
@@ -1328,6 +1331,36 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
           context,
           'Failed to submit report',
           icon: Icons.error,
+        );
+      }
+    }
+  }
+
+  void _trackWatchHistory() {
+    if (!_isInitialized) return;
+
+    final position = _controller.value.position;
+    final duration = _controller.value.duration;
+    
+    // Only track if short has been playing for at least 3 seconds
+    if (position.inSeconds >= 3) {
+      if (!_hasTrackedWatchHistory) {
+        WatchHistoryService.addToWatchHistory(
+          contentId: widget.short.id,
+          contentType: 'short',
+          title: widget.short.title,
+          thumbnailUrl: widget.short.thumbnailUrl,
+          channelName: widget.short.channelName,
+          channelAvatar: widget.short.channelAvatar,
+          watchDuration: position,
+          totalDuration: duration,
+        );
+        _hasTrackedWatchHistory = true;
+      } else {
+        WatchHistoryService.updateWatchProgress(
+          contentId: widget.short.id,
+          watchDuration: position,
+          totalDuration: duration,
         );
       }
     }

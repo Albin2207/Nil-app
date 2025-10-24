@@ -100,5 +100,21 @@ service cloud.firestore {
       // Allow authenticated users to delete (for moderation)
       allow delete: if request.auth != null;
     }
+    
+    // Watch History collection
+    match /watchHistory/{watchHistoryId} {
+      // Users can only read their own watch history
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      // Users can only create their own watch history
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      // Users can only update their own watch history
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      // Users can only delete their own watch history
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
   }
 }
