@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/watch_history_service.dart';
+import '../../core/services/watch_later_service.dart';
 import '../../core/utils/format_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
@@ -1093,6 +1094,32 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                   onTap: () {
                     Navigator.pop(context);
                     SnackBarHelper.showInfo(context, 'Quality settings coming soon!', icon: Icons.info);
+                  },
+                ),
+                
+                // Save to Watch Later
+                ListTile(
+                  leading: const Icon(Icons.watch_later_outlined, color: Colors.white),
+                  title: const Text('Save to Watch Later', style: TextStyle(color: Colors.white)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    
+                    final wasAdded = await WatchLaterService.addToWatchLater(
+                      contentId: widget.short.id,
+                      contentType: 'short',
+                      title: widget.short.title,
+                      thumbnailUrl: widget.short.thumbnailUrl,
+                      channelName: widget.short.channelName,
+                      channelAvatar: widget.short.channelAvatar,
+                    );
+                    
+                    if (mounted) {
+                      if (wasAdded) {
+                        SnackBarHelper.showSuccess(context, 'Added to Watch Later', icon: Icons.watch_later);
+                      } else {
+                        SnackBarHelper.showInfo(context, 'Already in Watch Later', icon: Icons.watch_later);
+                      }
+                    }
                   },
                 ),
                 

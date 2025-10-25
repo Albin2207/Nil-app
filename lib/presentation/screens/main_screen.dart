@@ -7,20 +7,23 @@ import 'profile_screen.dart';
 import 'shorts_screen_new.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialTab;
+  
+  const MainScreen({super.key, this.initialTab = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   late PageController _pageController;
   DateTime? _lastBackPressed;
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialTab;
     _pageController = PageController(initialPage: _currentIndex);
   }
 

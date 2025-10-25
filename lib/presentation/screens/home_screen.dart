@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/services/watch_later_service.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/common/offline_widget.dart';
 
@@ -39,13 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
     
     // Show offline widget if no connection
     if (!connectivityService.isOnline) {
-      return Scaffold(
+    return Scaffold(
         backgroundColor: Colors.black,
-        appBar: AppBar(
+      appBar: AppBar(
           backgroundColor: Colors.black,
-          elevation: 0,
-          title: Row(
-            children: [
+        elevation: 0,
+        title: Row(
+          children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -59,13 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Icon(Icons.play_arrow, color: Colors.red, size: 24),
               ),
-              const SizedBox(width: 8),
-              const Text(
+            const SizedBox(width: 8),
+            const Text(
                 'NIL',
-                style: TextStyle(
+              style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
                 ),
               ),
             ],
@@ -159,13 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                       fontSize: 24,
                       letterSpacing: 1,
-                    ),
-                  ),
-                ],
               ),
+            ),
+          ],
+        ),
         actions: [
           if (!_isSearching) ...[
-            IconButton(
+          IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -174,9 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Icon(Icons.cast, color: Colors.grey, size: 20),
               ),
-              onPressed: () {},
-            ),
-            IconButton(
+            onPressed: () {},
+          ),
+          IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -185,8 +186,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Icon(Icons.notifications_outlined, color: Colors.grey, size: 20),
               ),
-              onPressed: () {},
-            ),
+            onPressed: () {},
+          ),
           ],
           IconButton(
             icon: Container(
@@ -214,8 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           if (!_isSearching)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
               child: Consumer<AuthProvider>(
                 builder: (context, authProvider, child) {
                   final firebaseUser = authProvider.firebaseUser;
@@ -236,8 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                     borderRadius: BorderRadius.circular(16),
-                    child: CircleAvatar(
-                      radius: 16,
+            child: CircleAvatar(
+              radius: 16,
                       backgroundColor: Colors.red,
                       backgroundImage: photoUrl != null 
                           ? NetworkImage(photoUrl) 
@@ -256,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-            ),
+          ),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -412,47 +413,47 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 ),
               ),
               child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
+      onTap: () {
+        Navigator.push(
+          context,
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) =>
                           VideoPlayerScreen(video: widget.video),
                       transitionsBuilder: (context, animation, secondaryAnimation, child) {
                         return FadeTransition(opacity: animation, child: child);
                       },
-                    ),
-                  );
-                },
+          ),
+        );
+      },
                 borderRadius: BorderRadius.circular(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Thumbnail
-                    Stack(
-                      children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Thumbnail
+          Stack(
+            children: [
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16),
                           ),
                           child: Container(
-                            width: double.infinity,
-                            height: 220,
+                width: double.infinity,
+                height: 220,
                             color: Colors.grey[900],
-                            child: data['thumbnailUrl'] != null
-                                ? Image.network(
-                                    data['thumbnailUrl'],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
+                child: data['thumbnailUrl'] != null
+                    ? Image.network(
+                        data['thumbnailUrl'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
                                       return Center(
                                         child: Icon(
                                           Icons.error_outline,
                                           size: 48,
                                           color: Colors.grey[600],
                                         ),
-                                      );
-                                    },
-                                  )
+                          );
+                        },
+                      )
                                 : Center(
                                     child: Icon(
                                       Icons.play_circle_outline,
@@ -463,16 +464,16 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                           ),
                         ),
                         // Duration badge with glassy effect
-                        if (data['duration'] != null)
-                          Positioned(
+              if (data['duration'] != null)
+                Positioned(
                             bottom: 10,
                             right: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
+                    ),
+                    decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.black.withValues(alpha: 0.8),
@@ -484,26 +485,26 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                                   color: Colors.white.withValues(alpha: 0.2),
                                   width: 0.5,
                                 ),
-                              ),
-                              child: Text(
-                                _formatDuration(data['duration']),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
                     ),
+                    child: Text(
+                      _formatDuration(data['duration']),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
 
-                    // Video Info
-                    Padding(
+          // Video Info
+          Padding(
                       padding: const EdgeInsets.all(14),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                           // Channel Avatar with glassy border
                           Container(
                             decoration: BoxDecoration(
@@ -521,37 +522,37 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                             ),
                             child: CircleAvatar(
                               radius: 20,
-                              backgroundImage: NetworkImage(
-                                data['channelAvatar'] ?? 'https://i.pravatar.cc/150?img=2',
+                  backgroundImage: NetworkImage(
+                    data['channelAvatar'] ?? 'https://i.pravatar.cc/150?img=2',
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
+                  ),
+                ),
+                const SizedBox(width: 12),
 
-                          // Video Details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data['title'] ?? 'Untitled Video',
-                                  style: const TextStyle(
+                // Video Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data['title'] ?? 'Untitled Video',
+                        style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    height: 1.3,
+                          height: 1.3,
                                     color: Colors.white,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
                                     Expanded(
                                       child: Text(
                                         data['channelName'] ?? 'Unknown Channel',
-                                        style: TextStyle(
-                                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 13,
                                           color: Colors.grey[400],
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -592,16 +593,16 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[500],
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
-                                ),
-                              ],
-                            ),
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
 
                           // More options button with glassy effect
                           Container(
@@ -615,18 +616,18 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                                 size: 20,
                                 color: Colors.grey[400],
                               ),
-                              onPressed: () {
+                  onPressed: () {
                                 _showBottomSheet(context, widget.video, data);
-                              },
+                  },
                               padding: const EdgeInsets.all(8),
-                              constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
               ),
             ),
           ),
@@ -684,9 +685,9 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                   child: Column(
                     children: [
                       // Download
-                      _buildBottomSheetItem(
-                        icon: Icons.download_outlined,
-                        title: 'Download video',
+              _buildBottomSheetItem(
+                icon: Icons.download_outlined,
+                title: 'Download video',
                         onTap: () async {
                           Navigator.pop(sheetContext);
                           final downloadProvider = context.read<DownloadProvider>();
@@ -712,9 +713,9 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                         },
                       ),
                       // Share
-                      _buildBottomSheetItem(
-                        icon: Icons.share_outlined,
-                        title: 'Share',
+              _buildBottomSheetItem(
+                icon: Icons.share_outlined,
+                title: 'Share',
                         onTap: () {
                           Navigator.pop(sheetContext);
                           Share.share(
@@ -726,21 +727,38 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                       _buildBottomSheetItem(
                         icon: Icons.watch_later_outlined,
                         title: 'Save to Watch Later',
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          final wasAdded = await WatchLaterService.addToWatchLater(
+                            contentId: videoId,
+                            contentType: 'video',
+                            title: videoTitle,
+                            thumbnailUrl: thumbnailUrl,
+                            channelName: channelName,
+                            channelAvatar: data['channelAvatar'] ?? '',
+                          );
+                          if (context.mounted) {
+                            if (wasAdded) {
+                              SnackBarHelper.showSuccess(context, 'Added to Watch Later', icon: Icons.watch_later);
+                            } else {
+                              SnackBarHelper.showInfo(context, 'Already in Watch Later', icon: Icons.watch_later);
+                            }
+                          }
+                        },
+              ),
+              _buildBottomSheetItem(
+                icon: Icons.not_interested_outlined,
+                title: 'Not interested',
                         onTap: () => Navigator.pop(sheetContext),
-                      ),
-                      _buildBottomSheetItem(
-                        icon: Icons.not_interested_outlined,
-                        title: 'Not interested',
+              ),
+              _buildBottomSheetItem(
+                icon: Icons.block_outlined,
+                title: 'Don\'t recommend channel',
                         onTap: () => Navigator.pop(sheetContext),
-                      ),
-                      _buildBottomSheetItem(
-                        icon: Icons.block_outlined,
-                        title: 'Don\'t recommend channel',
-                        onTap: () => Navigator.pop(sheetContext),
-                      ),
-                      _buildBottomSheetItem(
-                        icon: Icons.flag_outlined,
-                        title: 'Report',
+              ),
+              _buildBottomSheetItem(
+                icon: Icons.flag_outlined,
+                title: 'Report',
                         onTap: () => Navigator.pop(sheetContext),
                       ),
                       const SizedBox(height: 20),

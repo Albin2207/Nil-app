@@ -54,7 +54,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         ),
       );
     }
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -69,7 +69,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
+                        onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -274,7 +274,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                   ],
                 ),
               ],
-            ),
+                  ),
           ),
         ],
       ),

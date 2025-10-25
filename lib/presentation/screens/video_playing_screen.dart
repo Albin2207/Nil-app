@@ -12,7 +12,7 @@ import '../widgets/comments/comments_preview_widget.dart';
 import '../widgets/video_player/related_videos_widget.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
-  final QueryDocumentSnapshot video;
+  final DocumentSnapshot video;
 
   const VideoPlayerScreen({super.key, required this.video});
 

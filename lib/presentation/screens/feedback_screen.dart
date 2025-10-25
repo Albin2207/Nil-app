@@ -270,7 +270,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Subject: [${_selectedType}] ${_subjectController.text}',
+              'Subject: [$_selectedType] ${_subjectController.text}',
               style: TextStyle(color: Colors.grey[400], fontSize: 12),
             ),
             const SizedBox(height: 8),

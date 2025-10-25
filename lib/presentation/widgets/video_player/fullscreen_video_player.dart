@@ -181,7 +181,7 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                       secondary: const Icon(Icons.repeat, color: Colors.white),
                       title: const Text('Loop Video', style: TextStyle(color: Colors.white)),
                       value: _localIsLooping,
-                      activeColor: Colors.red,
+                      activeThumbColor: Colors.red,
                       onChanged: (value) {
                         print('🔄 Loop toggle tapped (fullscreen): $value');
                         widget.controller.setLooping(value);
@@ -272,7 +272,7 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                         _setSleepTimer(minutes);
                       },
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -465,7 +465,7 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                         );
                       },
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),

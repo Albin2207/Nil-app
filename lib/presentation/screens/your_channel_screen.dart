@@ -69,7 +69,7 @@ class YourChannelScreen extends StatelessWidget {
                         child: user?.photoUrl == null
                             ? Text(
                                 (user?.name ?? 'User').isNotEmpty 
-                                    ? (user!.name![0].toUpperCase()) 
+                                    ? (user!.name[0].toUpperCase()) 
                                     : '?',
                                 style: const TextStyle(
                                   fontSize: 32,

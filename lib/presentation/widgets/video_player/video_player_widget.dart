@@ -222,7 +222,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                       secondary: const Icon(Icons.repeat, color: Colors.white),
                       title: const Text('Loop Video', style: TextStyle(color: Colors.white)),
                       value: _isLooping,
-                      activeColor: Colors.red,
+                      activeThumbColor: Colors.red,
                       onChanged: (value) {
                         print('🔄 Loop toggle tapped (portrait): $value');
                         setModalState(() {
@@ -242,7 +242,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                       title: const Text('Lock Screen', style: TextStyle(color: Colors.white)),
                       subtitle: const Text('Prevent accidental touches', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       value: _isScreenLocked,
-                      activeColor: Colors.red,
+                      activeThumbColor: Colors.red,
                       onChanged: (value) {
                         setModalState(() {
                           _isScreenLocked = value;
@@ -386,7 +386,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                     _changeQuality(quality);
                   },
                 );
-              }).toList(),
+              }),
             ],
           ),
         );

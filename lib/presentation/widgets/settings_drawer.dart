@@ -10,6 +10,7 @@ import '../screens/privacy_policy_screen.dart';
 import '../screens/feedback_screen.dart';
 import '../screens/your_channel_screen.dart';
 import '../screens/watch_history_screen.dart';
+import '../screens/watch_later_screen.dart';
 import '../screens/profile_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
@@ -138,6 +139,12 @@ class SettingsDrawer extends StatelessWidget {
                   title: 'Watch History',
                   subtitle: 'View your watched videos and shorts',
                   onTap: () => _navigateToWatchHistory(context),
+                ),
+                _buildSettingsTile(
+                  icon: Icons.watch_later_outlined,
+                  title: 'Watch Later',
+                  subtitle: 'Videos saved to watch later',
+                  onTap: () => _navigateToWatchLater(context),
                 ),
                 
                 const SizedBox(height: 16),
@@ -332,6 +339,16 @@ class SettingsDrawer extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => const WatchHistoryScreen(),
+      ),
+    );
+  }
+
+  void _navigateToWatchLater(BuildContext context) {
+    Navigator.pop(context); // Close drawer
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WatchLaterScreen(),
       ),
     );
   }

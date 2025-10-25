@@ -12,8 +12,6 @@ import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
 import 'creator_profile_screen.dart';
 import 'moderation_screen.dart';
-import 'privacy_policy_screen.dart';
-import 'feedback_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {

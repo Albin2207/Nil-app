@@ -865,7 +865,7 @@ class _ModerationScreenState extends State<ModerationScreen> {
       // Delete the comment from the video's comments subcollection
       await FirebaseFirestore.instance
           .collection('videos')
-          .doc(videoId!)
+          .doc(videoId)
           .collection('comments')
           .doc(commentId)
           .delete();
