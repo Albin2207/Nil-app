@@ -13,6 +13,7 @@ import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/watch_later_service.dart';
+import '../../core/services/content_preferences_service.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/common/offline_widget.dart';
 
@@ -210,38 +211,95 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('videos')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<Map<String, Set<String>>>(
+        future: Future.wait([
+          ContentPreferencesService.getNotInterestedVideos(),
+          ContentPreferencesService.getBlockedChannels(),
+        ]).then((results) => {
+          'notInterested': results[0],
+          'blockedChannels': results[1],
+        }),
+        builder: (context, prefsSnapshot) {
+          if (!prefsSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator(color: Colors.red));
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.video_library_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No videos yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+          final notInterestedVideos = prefsSnapshot.data!['notInterested']!;
+          final blockedChannels = prefsSnapshot.data!['blockedChannels']!;
+
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('videos')
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Colors.red));
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.video_library_outlined, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'No videos yet',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          final videos = snapshot.data!.docs;
+              // Filter out not interested videos and videos from blocked channels
+              final allVideos = snapshot.data!.docs;
+              final filteredVideos = allVideos.where((video) {
+                final data = video.data() as Map<String, dynamic>;
+                final videoId = video.id;
+                final uploadedBy = data['uploadedBy'] ?? '';
+                
+                // Filter out not interested videos
+                if (notInterestedVideos.contains(videoId)) {
+                  return false;
+                }
+                
+                // Filter out videos from blocked channels
+                if (blockedChannels.contains(uploadedBy)) {
+                  return false;
+                }
+                
+                return true;
+              }).toList();
 
-          return ListView.builder(
-            itemCount: videos.length,
-            itemBuilder: (context, index) {
-              return VideoCard(video: videos[index]);
+              if (filteredVideos.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.video_library_outlined, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No videos to show',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'All available videos are filtered',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: filteredVideos.length,
+                itemBuilder: (context, index) {
+                  return VideoCard(video: filteredVideos[index]);
+                },
+              );
             },
           );
         },
@@ -670,12 +728,39 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
               _buildBottomSheetItem(
                 icon: Icons.not_interested_outlined,
                 title: 'Not interested',
-                        onTap: () => Navigator.pop(sheetContext),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final success = await ContentPreferencesService.markVideoNotInterested(videoId);
+                  if (context.mounted) {
+                    if (success) {
+                      SnackBarHelper.showSuccess(context, 'Video marked as not interested', icon: Icons.not_interested);
+                      // Refresh the page
+                      if (mounted) setState(() {});
+                    } else {
+                      SnackBarHelper.showError(context, 'Failed to mark video', icon: Icons.error);
+                    }
+                  }
+                },
               ),
               _buildBottomSheetItem(
                 icon: Icons.block_outlined,
                 title: 'Don\'t recommend channel',
-                        onTap: () => Navigator.pop(sheetContext),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final success = await ContentPreferencesService.dontRecommendChannel(
+                    data['uploadedBy'] ?? '',
+                    channelName,
+                  );
+                  if (context.mounted) {
+                    if (success) {
+                      SnackBarHelper.showSuccess(context, 'Channel blocked from recommendations', icon: Icons.block);
+                      // Refresh the page
+                      if (mounted) setState(() {});
+                    } else {
+                      SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
+                    }
+                  }
+                },
               ),
               _buildBottomSheetItem(
                 icon: Icons.flag_outlined,

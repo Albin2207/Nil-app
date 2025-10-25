@@ -132,5 +132,24 @@ service cloud.firestore {
       allow delete: if request.auth != null && 
         request.auth.uid == resource.data.userId;
     }
+    
+    // User subcollections for content preferences
+    match /users/{userId}/notInterested/{videoId} {
+      // Users can only read their own not interested list
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Users can only create their own not interested entries
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can only delete their own not interested entries
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /users/{userId}/blockedChannels/{channelId} {
+      // Users can only read their own blocked channels list
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Users can only create their own blocked channel entries
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can only delete their own blocked channel entries
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

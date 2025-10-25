@@ -12,6 +12,7 @@ import '../providers/subscription_provider.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/watch_history_service.dart';
 import '../../core/services/watch_later_service.dart';
+import '../../core/services/content_preferences_service.dart';
 import '../../core/utils/format_helper.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../widgets/shorts/short_comments_sheet.dart';
@@ -75,41 +76,75 @@ class _ShortsScreenState extends State<ShortsScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
-      body: StreamBuilder<List<ShortVideo>>(
-        stream: context.read<ShortsProviderNew>().getShortsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && _cachedShorts.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.red),
-            );
+      body: FutureBuilder<Map<String, Set<String>>>(
+        future: Future.wait([
+          ContentPreferencesService.getNotInterestedVideos(),
+          ContentPreferencesService.getBlockedChannels(),
+        ]).then((results) => {
+          'notInterested': results[0],
+          'blockedChannels': results[1],
+        }),
+        builder: (context, prefsSnapshot) {
+          if (!prefsSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator(color: Colors.red));
           }
 
-          // Update cached shorts if we have new data
-          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            _cachedShorts = snapshot.data!;
-          }
+          final notInterestedShorts = prefsSnapshot.data!['notInterested']!;
+          final blockedChannels = prefsSnapshot.data!['blockedChannels']!;
 
-          if (_cachedShorts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.play_circle_outline,
-                      size: 80, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Shorts yet',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 18),
+          return StreamBuilder<List<ShortVideo>>(
+            stream: context.read<ShortsProviderNew>().getShortsStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting && _cachedShorts.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.red),
+                );
+              }
+
+              // Filter out not interested shorts and shorts from blocked channels
+              List<ShortVideo> allShorts = snapshot.data ?? _cachedShorts;
+              List<ShortVideo> filteredShorts = allShorts.where((short) {
+                // Filter out not interested shorts
+                if (notInterestedShorts.contains(short.id)) {
+                  return false;
+                }
+                
+                // Filter out shorts from blocked channels
+                if (blockedChannels.contains(short.uploadedBy)) {
+                  return false;
+                }
+                
+                return true;
+              }).toList();
+
+              // Update cached shorts if we have new data
+              if (snapshot.hasData && filteredShorts.isNotEmpty) {
+                _cachedShorts = filteredShorts;
+              }
+
+              if (_cachedShorts.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.play_circle_outline,
+                          size: 80, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Shorts to show',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        filteredShorts.isEmpty && allShorts.isNotEmpty
+                            ? 'All available shorts are filtered'
+                            : 'Add shorts to see them here',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add shorts to see them here',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
           return Stack(
             children: [
@@ -153,6 +188,8 @@ class _ShortsScreenState extends State<ShortsScreen> {
                   ),
                 ),
             ],
+          );
+            },
           );
         },
       ),
@@ -1129,9 +1166,16 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                 ListTile(
                   leading: const Icon(Icons.not_interested, color: Colors.white),
                   title: const Text('Not Interested', style: TextStyle(color: Colors.white)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    SnackBarHelper.showSuccess(context, 'We\'ll show you fewer shorts like this', icon: Icons.check);
+                    final success = await ContentPreferencesService.markVideoNotInterested(widget.short.id);
+                    if (context.mounted) {
+                      if (success) {
+                        SnackBarHelper.showSuccess(context, 'Short marked as not interested', icon: Icons.not_interested);
+                      } else {
+                        SnackBarHelper.showError(context, 'Failed to mark short', icon: Icons.error);
+                      }
+                    }
                   },
                 ),
                 
@@ -1232,7 +1276,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
   void _showConfirmDontRecommend(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
           title: const Text('Don\'t Recommend Channel?', style: TextStyle(color: Colors.white)),
@@ -1242,17 +1286,34 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                SnackBarHelper.showSuccess(
-                  context,
-                  'Channel blocked from recommendations',
-                  icon: Icons.block,
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final uploadedBy = widget.short.uploadedBy;
+                if (uploadedBy == null || uploadedBy.isEmpty) {
+                  if (context.mounted) {
+                    SnackBarHelper.showError(context, 'Unable to block channel', icon: Icons.error);
+                  }
+                  return;
+                }
+                final success = await ContentPreferencesService.dontRecommendChannel(
+                  uploadedBy,
+                  widget.short.channelName,
                 );
+                if (context.mounted) {
+                  if (success) {
+                    SnackBarHelper.showSuccess(
+                      context,
+                      'Channel blocked from recommendations',
+                      icon: Icons.block,
+                    );
+                  } else {
+                    SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
+                  }
+                }
               },
               child: const Text('Confirm', style: TextStyle(color: Colors.red)),
             ),
