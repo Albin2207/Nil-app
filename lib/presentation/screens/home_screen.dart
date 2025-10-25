@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'video_playing_screen.dart';
 import 'profile_screen.dart';
+import 'search_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -24,16 +25,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final connectivityService = context.watch<ConnectivityService>();
@@ -86,135 +77,94 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        title: _isSearching
-            ? Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
                     color: Colors.red.withValues(alpha: 0.3),
-                    width: 1,
+                    blurRadius: 12,
                   ),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Search videos...',
-                    hintStyle: TextStyle(color: Colors.grey[500]),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    prefixIcon: const Icon(Icons.search, color: Colors.red),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/nil_app_icon-removebg-preview.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.red.withValues(alpha: 0.3),
+                            Colors.red.withValues(alpha: 0.1),
+                          ],
+                        ),
+                      ),
+                      child: const Icon(Icons.play_circle_filled, color: Colors.red, size: 20),
+                    );
                   },
                 ),
-              )
-            : Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/nil_app_icon-removebg-preview.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.red.withValues(alpha: 0.3),
-                                  Colors.red.withValues(alpha: 0.1),
-                                ],
-                              ),
-                            ),
-                            child: const Icon(Icons.play_circle_filled, color: Colors.red, size: 20),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'NIL',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                      letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'NIL',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                letterSpacing: 1,
               ),
             ),
           ],
         ),
         actions: [
-          if (!_isSearching) ...[
-          IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.cast, color: Colors.grey, size: 20),
-              ),
-            onPressed: () {},
-          ),
-          IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.notifications_outlined, color: Colors.grey, size: 20),
-              ),
-            onPressed: () {},
-          ),
-          ],
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: _isSearching
-                    ? Colors.red.withValues(alpha: 0.2)
-                    : Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                _isSearching ? Icons.close : Icons.search,
-                color: _isSearching ? Colors.red : Colors.grey,
-                size: 20,
+              child: const Icon(Icons.cast, color: Colors.grey, size: 20),
+            ),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.notifications_outlined, color: Colors.grey, size: 20),
+            ),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search, color: Colors.grey, size: 20),
             ),
             onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchController.clear();
-                  _searchQuery = '';
-                }
-              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
             },
           ),
-          if (!_isSearching)
           Padding(
             padding: const EdgeInsets.only(right: 8),
               child: Consumer<AuthProvider>(
@@ -286,41 +236,12 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          final allVideos = snapshot.data!.docs;
-
-          // Filter videos based on search query
-          final filteredVideos = _searchQuery.isEmpty
-              ? allVideos
-              : allVideos.where((video) {
-                  final data = video.data() as Map<String, dynamic>;
-                  final title = (data['title'] ?? '').toString().toLowerCase();
-                  final channelName =
-                      (data['channelName'] ?? '').toString().toLowerCase();
-                  return title.contains(_searchQuery) ||
-                      channelName.contains(_searchQuery);
-                }).toList();
-
-          if (filteredVideos.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.search_off, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No videos found for "$_searchQuery"',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
+          final videos = snapshot.data!.docs;
 
           return ListView.builder(
-            itemCount: filteredVideos.length,
+            itemCount: videos.length,
             itemBuilder: (context, index) {
-              return VideoCard(video: filteredVideos[index]);
+              return VideoCard(video: videos[index]);
             },
           );
         },

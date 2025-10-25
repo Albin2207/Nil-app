@@ -86,7 +86,7 @@ class ChannelInfoWidget extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                   StreamBuilder<int>(
@@ -99,7 +99,7 @@ class ChannelInfoWidget extends StatelessWidget {
                         '${FormatHelper.formatCount(count)} subscribers',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: Colors.grey[400],
                         ),
                       );
                     },

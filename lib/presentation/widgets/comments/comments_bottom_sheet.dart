@@ -320,6 +320,7 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.comment_outlined, size: 64, color: Colors.grey[600]),
           const SizedBox(height: 16),

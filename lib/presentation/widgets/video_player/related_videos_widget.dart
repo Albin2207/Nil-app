@@ -89,7 +89,7 @@ class RelatedVideosWidget extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'No more videos yet',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[400]),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -187,7 +187,7 @@ class RelatedVideosWidget extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       height: 1.3,
-                      color: AppConstants.textPrimaryColor,
+                      color: Colors.white,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -195,9 +195,9 @@ class RelatedVideosWidget extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     data['channelName'] ?? 'Unknown Channel',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black87,
+                      color: Colors.grey[400],
                     ),
                   ),
                   Text(

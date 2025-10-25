@@ -30,7 +30,12 @@ class VideoInfoWidget extends StatelessWidget {
         final currentViews = data?['views'] ?? views;
 
         return Padding(
-          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          padding: const EdgeInsets.only(
+            left: AppConstants.defaultPadding,
+            right: AppConstants.defaultPadding,
+            top: AppConstants.defaultPadding,
+            bottom: 8,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -42,7 +47,7 @@ class VideoInfoWidget extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 '${FormatHelper.formatCount(currentViews)} views • ${timeago.format(timestamp.toDate())}',
                 style: TextStyle(

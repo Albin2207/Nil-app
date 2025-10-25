@@ -75,7 +75,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
   Widget build(BuildContext context) {
     if (_videoModel == null) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.black,
         body: Center(
           child: CircularProgressIndicator(
             color: Colors.red,
@@ -86,7 +86,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: AnimatedBuilder(
         animation: _fadeAnimation,
         builder: (context, child) {
@@ -147,6 +147,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                           timestamp: _videoModel!.timestamp,
                         ),
 
+                        // Description
+                        DescriptionWidget(
+                          description: _videoModel!.description,
+                          likes: _videoModel!.likes,
+                          views: _videoModel!.views,
+                          timestamp: _videoModel!.timestamp,
+                        ),
+
                         // Action Buttons
                         ActionButtonsWidget(
                           videoId: _videoModel!.id,
@@ -165,13 +173,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                           channelId: _videoModel!.uploadedBy,
                         ),
 
-                        // Description
-                        DescriptionWidget(description: _videoModel!.description),
-
-                        const Divider(
+                        Divider(
                           height: 1,
                           thickness: 8,
-                          color: Color(0xFFF5F5F5),
+                          color: Colors.grey[900],
                         ),
 
                         // Comments Section

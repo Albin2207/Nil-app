@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/format_helper.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/services/watch_later_service.dart';
 import '../../providers/video_provider.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/playlist_provider.dart';
@@ -501,8 +502,14 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
             const SizedBox(width: AppConstants.smallPadding),
             _ActionButton(
               icon: Icons.playlist_add,
-              label: 'Save',
+              label: 'Playlist',
               onTap: () => _showPlaylistPicker(context),
+            ),
+            const SizedBox(width: AppConstants.smallPadding),
+            _ActionButton(
+              icon: Icons.watch_later_outlined,
+              label: 'Watch Later',
+              onTap: () => _addToWatchLater(context),
             ),
             const SizedBox(width: AppConstants.smallPadding),
             _ActionButton(
@@ -615,6 +622,45 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
       }
     }
   }
+
+  Future<void> _addToWatchLater(BuildContext context) async {
+    try {
+      // Fetch video details from Firestore
+      final videoDoc = await FirebaseFirestore.instance
+          .collection(AppConstants.videosCollection)
+          .doc(widget.videoId)
+          .get();
+      
+      if (!videoDoc.exists || !context.mounted) return;
+      
+      final videoData = videoDoc.data() as Map<String, dynamic>;
+      
+      final wasAdded = await WatchLaterService.addToWatchLater(
+        contentId: widget.videoId,
+        contentType: 'video',
+        title: widget.videoTitle,
+        thumbnailUrl: videoData['thumbnailUrl'] ?? '',
+        channelName: videoData['channelName'] ?? '',
+        channelAvatar: videoData['channelAvatar'] ?? '',
+      );
+      
+      if (context.mounted) {
+        if (wasAdded) {
+          SnackBarHelper.showSuccess(context, 'Added to Watch Later', icon: Icons.watch_later);
+        } else {
+          SnackBarHelper.showInfo(context, 'Already in Watch Later', icon: Icons.watch_later);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showError(
+          context,
+          'Failed to add to Watch Later',
+          icon: Icons.error,
+        );
+      }
+    }
+  }
 }
 
 class _ReportOption extends StatelessWidget {
@@ -639,7 +685,7 @@ class _ReportOption extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+class _ActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -653,33 +699,112 @@ class _ActionButton extends StatelessWidget {
   });
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: AppConstants.iconSizeMedium,
-              color: isActive ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() => _isPressed = true);
+        _controller.forward();
+      },
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () {
+        setState(() => _isPressed = false);
+        _controller.reverse();
+      },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: widget.isActive
+                ? LinearGradient(
+                    colors: [
+                      Colors.red.withValues(alpha: 0.25),
+                      Colors.red.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : LinearGradient(
+                    colors: [
+                      Colors.red.withValues(alpha: 0.08),
+                      Colors.grey[900]!.withValues(alpha: 0.95),
+                      Colors.black.withValues(alpha: 0.9),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: widget.isActive 
+                  ? Colors.red.withValues(alpha: 0.4)
+                  : Colors.red.withValues(alpha: 0.15),
+              width: 1.5,
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isActive ? AppConstants.primaryColor : AppConstants.textPrimaryColor,
+            boxShadow: [
+              BoxShadow(
+                color: widget.isActive
+                    ? Colors.red.withValues(alpha: 0.3)
+                    : Colors.red.withValues(alpha: 0.1),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-            ),
-          ],
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.icon,
+                size: AppConstants.iconSizeMedium,
+                color: widget.isActive ? Colors.red : Colors.grey[300],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: widget.isActive ? Colors.red : Colors.grey[300],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

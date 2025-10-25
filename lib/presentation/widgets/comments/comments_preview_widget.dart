@@ -53,16 +53,19 @@ class CommentsPreviewWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppConstants.textPrimaryColor,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '$commentCount',
-                      style: AppConstants.captionTextStyle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[400],
+                      ),
                     ),
                     const Spacer(),
-                    Icon(Icons.expand_more, color: Colors.grey[600]),
+                    Icon(Icons.expand_more, color: Colors.grey[400]),
                   ],
                 ),
               ),
