@@ -1,0 +1,11 @@
+# Netlify redirects file
+# This ensures all routes go to index.html for SPA behavior
+
+# Redirect all video links to index.html with query parameters
+/video/* /index.html 200
+
+# Redirect root to index.html
+/ /index.html 200
+
+# Handle any other routes
+/* /index.html 200

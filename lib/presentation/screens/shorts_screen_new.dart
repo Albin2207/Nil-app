@@ -512,7 +512,7 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
           // Right side action buttons
           Positioned(
             right: 12,
-            bottom: 80,
+            bottom: 40,
             child: Column(
               children: [
                 _buildActionButton(

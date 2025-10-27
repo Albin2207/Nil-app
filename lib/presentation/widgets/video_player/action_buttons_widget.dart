@@ -466,9 +466,12 @@ class _ActionButtonsWidgetState extends State<ActionButtonsWidget> {
               icon: Icons.share_outlined,
               label: 'Share',
               onTap: () {
+                // Share with Netlify redirect URL that opens the app
+                final netlifyUrl = 'https://nilapp-links.netlify.app/video?id=${widget.videoId}';
+                final shareText = 'Check out this video on NIL:\n${widget.videoTitle}\n\n$netlifyUrl';
                 // ignore: deprecated_member_use
                 Share.share(
-                  'Check out this video: ${widget.videoTitle}\n${widget.videoUrl}',
+                  shareText,
                   subject: widget.videoTitle,
                 );
               },

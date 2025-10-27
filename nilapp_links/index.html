@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIL App Deep Link</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: white;
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    h1 {
+      color: #e50914;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    #openBtn {
+      display: inline-block;
+      background: #e50914;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 18px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    #openBtn:hover {
+      background: #b00610;
+    }
+
+    #message {
+      margin-top: 30px;
+      font-size: 16px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Open in NIL App</h1>
+
+  <a id="openBtn" href="#">Tap to open in NIL App</a>
+  <p id="message">If nothing happens, make sure the NIL App is installed.</p>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const videoId = params.get("id") || "test"; // fallback test
+      const deepLink = `nilstream://video/${videoId}`;
+
+      const openBtn = document.getElementById("openBtn");
+      openBtn.href = deepLink;
+
+      console.log("Deep link generated:", deepLink);
+    });
+  </script>
+</body>
+</html>

@@ -45,8 +45,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Navigate after 3 seconds with auth checks
-    Timer(const Duration(seconds: 3), () {
+    // Navigate after 1.5 seconds with auth checks
+    Timer(const Duration(milliseconds: 1500), () {
       _checkAppState();
     });
   }

@@ -793,8 +793,11 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 title: 'Share',
                         onTap: () {
                           Navigator.pop(sheetContext);
+                          // Share with Netlify redirect URL that opens the app
+                          final netlifyUrl = 'https://nilapp-links.netlify.app/video?id=$videoId';
+                          final shareText = 'Check out this video on NIL:\n$videoTitle\n\n$netlifyUrl';
                           Share.share(
-                            'Check out this video: $videoTitle\n$videoUrl',
+                            shareText,
                             subject: videoTitle,
                           );
                         },
