@@ -30,6 +30,8 @@ class _ShortsScreenState extends State<ShortsScreen> {
   late PageController _pageController;
   int _currentIndex = 0;
   List<ShortVideo> _cachedShorts = [];
+  Set<String> _localNotInterested = {};
+  Set<String> _localBlockedChannels = {};
 
   @override
   void initState() {
@@ -104,13 +106,13 @@ class _ShortsScreenState extends State<ShortsScreen> {
               // Filter out not interested shorts and shorts from blocked channels
               List<ShortVideo> allShorts = snapshot.data ?? _cachedShorts;
               List<ShortVideo> filteredShorts = allShorts.where((short) {
-                // Filter out not interested shorts
-                if (notInterestedShorts.contains(short.id)) {
+                // Filter out not interested shorts (from Firestore OR local state)
+                if (notInterestedShorts.contains(short.id) || _localNotInterested.contains(short.id)) {
                   return false;
                 }
                 
-                // Filter out shorts from blocked channels
-                if (blockedChannels.contains(short.uploadedBy)) {
+                // Filter out shorts from blocked channels (from Firestore OR local state)
+                if (blockedChannels.contains(short.uploadedBy) || _localBlockedChannels.contains(short.uploadedBy)) {
                   return false;
                 }
                 
@@ -162,6 +164,8 @@ class _ShortsScreenState extends State<ShortsScreen> {
                     key: ValueKey(short.id),
                     short: short,
                     isCurrentPage: index == _currentIndex,
+                    onMarkNotInterested: _handleMarkNotInterested,
+                    onBlockChannel: _handleBlockChannel,
                   );
                 },
               ),
@@ -195,16 +199,57 @@ class _ShortsScreenState extends State<ShortsScreen> {
       ),
     );
   }
+
+  void _handleMarkNotInterested(String shortId) {
+    setState(() {
+      if (_localNotInterested.contains(shortId)) {
+        // If already in the set, remove it (undo action)
+        _localNotInterested.remove(shortId);
+      } else {
+        // Add to the set (mark as not interested)
+        _localNotInterested.add(shortId);
+        // Move to next short
+        _moveToNextShort();
+      }
+    });
+  }
+
+  void _handleBlockChannel(String channelId) {
+    setState(() {
+      if (_localBlockedChannels.contains(channelId)) {
+        // If already in the set, remove it (undo action)
+        _localBlockedChannels.remove(channelId);
+      } else {
+        // Add to the set (block channel)
+        _localBlockedChannels.add(channelId);
+        // Move to next short
+        _moveToNextShort();
+      }
+    });
+  }
+
+  void _moveToNextShort() {
+    if (_currentIndex < _cachedShorts.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
 }
 
 class ShortVideoPlayer extends StatefulWidget {
   final ShortVideo short;
   final bool isCurrentPage;
+  final Function(String) onMarkNotInterested;
+  final Function(String) onBlockChannel;
 
   const ShortVideoPlayer({
     super.key,
     required this.short,
     required this.isCurrentPage,
+    required this.onMarkNotInterested,
+    required this.onBlockChannel,
   });
 
   @override
@@ -1168,13 +1213,48 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                   title: const Text('Not Interested', style: TextStyle(color: Colors.white)),
                   onTap: () async {
                     Navigator.pop(context);
-                    final success = await ContentPreferencesService.markVideoNotInterested(widget.short.id);
+                    
+                    final shortId = widget.short.id;
+                    
+                    // Call parent callback to handle local state and navigation
+                    widget.onMarkNotInterested(shortId);
+                    
+                    // Show snackbar with undo option
                     if (context.mounted) {
-                      if (success) {
-                        SnackBarHelper.showSuccess(context, 'Short marked as not interested', icon: Icons.not_interested);
-                      } else {
-                        SnackBarHelper.showError(context, 'Failed to mark short', icon: Icons.error);
-                      }
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Row(
+                            children: [
+                              Icon(Icons.not_interested, color: Colors.white, size: 20),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Short marked as not interested',
+                                  style: TextStyle(color: Colors.white, fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.grey[850],
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 4),
+                          action: SnackBarAction(
+                            label: 'UNDO',
+                            textColor: Colors.red,
+                            onPressed: () {
+                              // Call parent callback to undo
+                              widget.onMarkNotInterested(shortId);
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    // Save to Firestore in background
+                    final success = await ContentPreferencesService.markVideoNotInterested(shortId);
+                    if (!success && context.mounted) {
+                      SnackBarHelper.showError(context, 'Failed to mark short', icon: Icons.error);
                     }
                   },
                 ),
@@ -1299,20 +1379,53 @@ class _ShortVideoPlayerState extends State<ShortVideoPlayer> with SingleTickerPr
                   }
                   return;
                 }
+                
+                final channelName = widget.short.channelName;
+                
+                // Call parent callback to handle local state and navigation
+                widget.onBlockChannel(uploadedBy);
+                
+                // Show snackbar with undo option
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.block, color: Colors.white, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Channel "$channelName" blocked',
+                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: Colors.grey[850],
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 4),
+                      action: SnackBarAction(
+                        label: 'UNDO',
+                        textColor: Colors.red,
+                        onPressed: () {
+                          // Call parent callback to undo
+                          widget.onBlockChannel(uploadedBy);
+                        },
+                      ),
+                    ),
+                  );
+                }
+                
+                // Save to Firestore in background
                 final success = await ContentPreferencesService.dontRecommendChannel(
                   uploadedBy,
-                  widget.short.channelName,
+                  channelName,
                 );
-                if (context.mounted) {
-                  if (success) {
-                    SnackBarHelper.showSuccess(
-                      context,
-                      'Channel blocked from recommendations',
-                      icon: Icons.block,
-                    );
-                  } else {
-                    SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
-                  }
+                if (!success && context.mounted) {
+                  SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
                 }
               },
               child: const Text('Confirm', style: TextStyle(color: Colors.red)),

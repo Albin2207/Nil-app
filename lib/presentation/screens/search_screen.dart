@@ -268,7 +268,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       ),
                     ),
                   ),
-                  ...filteredVideos.map((video) => VideoCard(video: video)),
+                  ...filteredVideos.map((video) => VideoCard(
+          video: video,
+          onMarkNotInterested: _handleMarkNotInterested,
+          onBlockChannel: _handleBlockChannel,
+        )),
                 ],
               ],
             );
@@ -324,7 +328,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   : ListView.builder(
                       itemCount: filteredVideos.length,
                       itemBuilder: (context, index) {
-                        return VideoCard(video: filteredVideos[index]);
+                        return VideoCard(
+          video: filteredVideos[index],
+          onMarkNotInterested: _handleMarkNotInterested,
+          onBlockChannel: _handleBlockChannel,
+        );
                       },
                     ),
             ),
@@ -844,6 +852,18 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         ),
       ),
     );
+  }
+
+  void _handleMarkNotInterested(String videoId) {
+    // For search screen, we don't need local state management
+    // The filtering will be handled by the parent home screen
+    // This is just a placeholder to satisfy the VideoCard requirements
+  }
+
+  void _handleBlockChannel(String channelId) {
+    // For search screen, we don't need local state management
+    // The filtering will be handled by the parent home screen
+    // This is just a placeholder to satisfy the VideoCard requirements
   }
 }
 

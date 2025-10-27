@@ -325,6 +325,7 @@ class _ModerationScreenState extends State<ModerationScreen> {
                         .collection('comments')
                         .doc(report.commentId)
                         .get()
+                    // ignore: null_argument_to_non_null_type
                     : Future.value(null),
                 builder: (context, commentSnapshot) {
                   if (!commentSnapshot.hasData || commentSnapshot.data == null) {

@@ -26,6 +26,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Set<String> _localNotInterested = {};
+  Set<String> _localBlockedChannels = {};
+  
   @override
   Widget build(BuildContext context) {
     final connectivityService = context.watch<ConnectivityService>();
@@ -260,13 +263,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 final videoId = video.id;
                 final uploadedBy = data['uploadedBy'] ?? '';
                 
-                // Filter out not interested videos
-                if (notInterestedVideos.contains(videoId)) {
+                // Filter out not interested videos (from Firestore OR local state)
+                if (notInterestedVideos.contains(videoId) || _localNotInterested.contains(videoId)) {
                   return false;
                 }
                 
-                // Filter out videos from blocked channels
-                if (blockedChannels.contains(uploadedBy)) {
+                // Filter out videos from blocked channels (from Firestore OR local state)
+                if (blockedChannels.contains(uploadedBy) || _localBlockedChannels.contains(uploadedBy)) {
                   return false;
                 }
                 
@@ -297,7 +300,19 @@ class _HomeScreenState extends State<HomeScreen> {
               return ListView.builder(
                 itemCount: filteredVideos.length,
                 itemBuilder: (context, index) {
-                  return VideoCard(video: filteredVideos[index]);
+                  return VideoCard(
+                    video: filteredVideos[index],
+                    onMarkNotInterested: (videoId) {
+                      setState(() {
+                        _localNotInterested.add(videoId);
+                      });
+                    },
+                    onBlockChannel: (channelId) {
+                      setState(() {
+                        _localBlockedChannels.add(channelId);
+                      });
+                    },
+                  );
                 },
               );
             },
@@ -310,8 +325,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class VideoCard extends StatefulWidget {
   final QueryDocumentSnapshot video;
+  final Function(String) onMarkNotInterested;
+  final Function(String) onBlockChannel;
 
-  const VideoCard({required this.video, super.key});
+  const VideoCard({
+    required this.video,
+    required this.onMarkNotInterested,
+    required this.onBlockChannel,
+    super.key,
+  });
 
   @override
   State<VideoCard> createState() => _VideoCardState();
@@ -730,15 +752,19 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 title: 'Not interested',
                 onTap: () async {
                   Navigator.pop(sheetContext);
-                  final success = await ContentPreferencesService.markVideoNotInterested(videoId);
+                  
+                  // Call parent callback to handle local state
+                  widget.onMarkNotInterested(videoId);
+                  
+                  // Show success message
                   if (context.mounted) {
-                    if (success) {
-                      SnackBarHelper.showSuccess(context, 'Video marked as not interested', icon: Icons.not_interested);
-                      // Refresh the page
-                      if (mounted) setState(() {});
-                    } else {
-                      SnackBarHelper.showError(context, 'Failed to mark video', icon: Icons.error);
-                    }
+                    SnackBarHelper.showSuccess(context, 'Video marked as not interested', icon: Icons.not_interested);
+                  }
+                  
+                  // Save to Firestore in background
+                  final success = await ContentPreferencesService.markVideoNotInterested(videoId);
+                  if (!success && context.mounted) {
+                    SnackBarHelper.showError(context, 'Failed to mark video', icon: Icons.error);
                   }
                 },
               ),
@@ -747,18 +773,30 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
                 title: 'Don\'t recommend channel',
                 onTap: () async {
                   Navigator.pop(sheetContext);
+                  
+                  final channelId = data['uploadedBy'] ?? '';
+                  if (channelId.isEmpty) {
+                    if (context.mounted) {
+                      SnackBarHelper.showError(context, 'Unable to block channel - no channel ID', icon: Icons.error);
+                    }
+                    return;
+                  }
+                  
+                  // Call parent callback to handle local state
+                  widget.onBlockChannel(channelId);
+                  
+                  // Show success message
+                  if (context.mounted) {
+                    SnackBarHelper.showSuccess(context, 'Channel blocked from recommendations', icon: Icons.block);
+                  }
+                  
+                  // Save to Firestore in background
                   final success = await ContentPreferencesService.dontRecommendChannel(
-                    data['uploadedBy'] ?? '',
+                    channelId,
                     channelName,
                   );
-                  if (context.mounted) {
-                    if (success) {
-                      SnackBarHelper.showSuccess(context, 'Channel blocked from recommendations', icon: Icons.block);
-                      // Refresh the page
-                      if (mounted) setState(() {});
-                    } else {
-                      SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
-                    }
+                  if (!success && context.mounted) {
+                    SnackBarHelper.showError(context, 'Failed to block channel', icon: Icons.error);
                   }
                 },
               ),

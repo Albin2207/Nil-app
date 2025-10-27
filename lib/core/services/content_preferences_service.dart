@@ -11,6 +11,12 @@ class ContentPreferencesService {
       final userId = _auth.currentUser?.uid;
       if (userId == null) return false;
 
+      // Validate videoId is not empty
+      if (videoId.isEmpty) {
+        print('Error marking video as not interested: videoId is empty');
+        return false;
+      }
+
       await _firestore
           .collection('users')
           .doc(userId)
@@ -33,6 +39,12 @@ class ContentPreferencesService {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId == null) return false;
+
+      // Validate channelId is not empty
+      if (channelId.isEmpty) {
+        print('Error blocking channel: channelId is empty');
+        return false;
+      }
 
       await _firestore
           .collection('users')
