@@ -151,5 +151,39 @@ service cloud.firestore {
       // Users can only delete their own blocked channel entries
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+    
+    // Notifications collection (global)
+    match /notifications/{notificationId} {
+      // Anyone can read notifications
+      allow read: if true;
+      // Anyone can create notifications (for upload notifications)
+      allow create: if true;
+      // Users can update their own read status
+      allow update: if request.auth != null;
+      // Only authenticated users can delete
+      allow delete: if request.auth != null;
+    }
+    
+    // User notifications subcollection
+    match /users/{userId}/notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Anyone can create notifications for users (for upload notifications)
+      allow create: if true;
+      // Users can only update their own notifications (mark as read)
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Users can only delete their own notifications
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User tokens collection (for FCM tokens)
+    match /user_tokens/{userId} {
+      // Users can only read their own token
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Users can create/update their own token
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // Users can delete their own token
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

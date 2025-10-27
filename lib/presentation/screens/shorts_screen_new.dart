@@ -30,8 +30,8 @@ class _ShortsScreenState extends State<ShortsScreen> {
   late PageController _pageController;
   int _currentIndex = 0;
   List<ShortVideo> _cachedShorts = [];
-  Set<String> _localNotInterested = {};
-  Set<String> _localBlockedChannels = {};
+  final Set<String> _localNotInterested = {};
+  final Set<String> _localBlockedChannels = {};
 
   @override
   void initState() {

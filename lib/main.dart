@@ -1,8 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:nil_app/firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'core/services/firebase_messaging_background.dart';
+import 'core/services/fcm_token_service.dart';
+import 'core/services/notification_topics_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/movies_provider.dart';
 import 'presentation/providers/shorts_provider_new.dart';
@@ -23,6 +27,19 @@ Future<void> main() async {
   
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Set up FCM background handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  
+  // Initialize FCM service in background (non-blocking)
+  FCMTokenService().initializeAndGetToken().catchError((error) {
+    debugPrint('FCM initialization error: $error');
+  });
+  
+  // Initialize notification topics in background (non-blocking)
+  NotificationTopicsService().initializeSubscriptions().catchError((error) {
+    debugPrint('Notification topics initialization error: $error');
+  });
   
   // Initialize Hive
   await Hive.initFlutter();

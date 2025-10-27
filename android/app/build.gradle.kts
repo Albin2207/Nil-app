@@ -34,6 +34,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -69,4 +70,5 @@ flutter {
 dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.multidex:multidex:2.0.1") // Optional for MultiDex
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

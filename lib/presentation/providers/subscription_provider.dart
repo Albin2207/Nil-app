@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/subscription_model.dart';
+import '../../core/services/notification_topics_service.dart';
 
 class SubscriptionProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -95,6 +96,9 @@ class SubscriptionProvider with ChangeNotifier {
       _subscribedChannelIds.add(channelId);
       notifyListeners();
       
+      // Subscribe to channel notifications
+      await NotificationTopicsService().subscribeToChannelTopics(channelId);
+      
       print('✅ Subscribe success!');
       return true;
     } catch (e) {
@@ -142,6 +146,9 @@ class SubscriptionProvider with ChangeNotifier {
       _subscribedChannelIds.remove(channelId);
       _subscriptions.removeWhere((s) => s.channelId == channelId);
       notifyListeners();
+      
+      // Unsubscribe from channel notifications
+      await NotificationTopicsService().unsubscribeFromChannelTopics(channelId);
       
       print('✅ Unsubscribe success!');
       return true;

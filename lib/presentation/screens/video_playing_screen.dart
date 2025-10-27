@@ -173,6 +173,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with TickerProvid
                           channelId: _videoModel!.uploadedBy,
                         ),
 
+                        const SizedBox(height: 16),
+
                         Divider(
                           height: 1,
                           thickness: 8,

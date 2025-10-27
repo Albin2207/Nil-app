@@ -12,6 +12,7 @@ import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
 import 'creator_profile_screen.dart';
 import 'moderation_screen.dart';
+import 'notifications_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -550,47 +551,32 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             textAlign: TextAlign.center,
                           ),
                           
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           
-                          // Stats Row with Glass Effect
+                          // Notifications Button
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildStat('Videos', user?.uploadedVideosCount ?? 0),
-                                Container(
-                                  height: 48,
-                                  width: 2,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.transparent,
-                                        Colors.white.withValues(alpha: 0.3),
-                                        Colors.transparent,
-                                      ],
-                                    ),
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NotificationsScreen(),
                                   ),
+                                );
+                              },
+                              icon: const Icon(Icons.notifications_outlined, size: 20),
+                              label: const Text('Notifications'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                                foregroundColor: Colors.blue,
+                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  side: BorderSide(color: Colors.blue.withValues(alpha: 0.5), width: 1),
                                 ),
-                                _buildStat('Shorts', user?.uploadedShortsCount ?? 0),
-                              ],
+                              ),
                             ),
                           ),
                           

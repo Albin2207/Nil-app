@@ -137,6 +137,15 @@ class UploadProvider extends ChangeNotifier {
       _uploadProgress = 1.0;
       notifyListeners();
 
+      // Send notifications to all users in background
+      await _sendNotificationToUsers(
+        uploadType: uploadType,
+        title: title,
+        userName: userName,
+        videoId: docRef.id,
+        userId: userId,
+      );
+
       await Future.delayed(const Duration(milliseconds: 500));
       _isUploading = false;
       _uploadProgress = 0.0;
@@ -203,6 +212,56 @@ class UploadProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error getting video duration: $e');
       return 0; // Fallback to 0 if duration extraction fails
+    }
+  }
+
+  /// Store notification in Firestore for users to see
+  Future<void> _sendNotificationToUsers({
+    required UploadType uploadType,
+    required String title,
+    required String userName,
+    required String videoId,
+    required String userId,
+  }) async {
+    try {
+      // Get all users from Firestore
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      
+      if (usersSnapshot.docs.isEmpty) return;
+      
+      // Create notification for each user
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (final userDoc in usersSnapshot.docs) {
+        final notificationRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userDoc.id)
+            .collection('notifications')
+            .doc();
+        
+        batch.set(notificationRef, {
+          'type': uploadType == UploadType.video ? 'video_upload' : 'short_upload',
+          'title': uploadType == UploadType.video 
+              ? '🎬 New Video Uploaded!' 
+              : '⚡ New Short Available!',
+          'body': '$title by $userName',
+          'contentType': uploadType == UploadType.video ? 'video' : 'short',
+          'contentId': videoId,
+          'channelId': userId,
+          'channelName': userName,
+          'videoTitle': title,
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+      }
+      
+      await batch.commit();
+      print('✅ Notifications created for ${usersSnapshot.docs.length} users');
+    } catch (e) {
+      print('⚠️ Failed to create notifications: $e');
+      // Don't fail the upload if notification fails
     }
   }
 }

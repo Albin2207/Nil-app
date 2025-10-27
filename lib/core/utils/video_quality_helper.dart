@@ -22,6 +22,8 @@ class VideoQualityHelper {
       '/q_auto:low/', '/q_auto:good/', '/q_auto:best/',
       '/q_30/', '/q_50/', '/q_70/', '/q_90/',
       '/w_640/', '/w_854/', '/w_1280/', '/w_1920/',
+      '/h_360/', '/h_480/', '/h_720/', '/h_1080/',
+      '/c_scale/', '/c_fit/', '/c_fill/',
     ];
     
     for (var transform in transformations) {
@@ -32,16 +34,16 @@ class VideoQualityHelper {
     String transformation;
     switch (quality) {
       case VideoQuality.q360p:
-        transformation = 'q_30,w_640,h_360';
+        transformation = 'q_auto:low,w_640,c_scale';
         break;
       case VideoQuality.q480p:
-        transformation = 'q_50,w_854,h_480';
+        transformation = 'q_auto:good,w_854,c_scale';
         break;
       case VideoQuality.q720p:
-        transformation = 'q_70,w_1280,h_720';
+        transformation = 'q_auto:good,w_1280,c_scale';
         break;
       case VideoQuality.q1080p:
-        transformation = 'q_90,w_1920,h_1080';
+        transformation = 'q_auto:best,w_1920,c_scale';
         break;
       case VideoQuality.auto:
       default:

@@ -74,6 +74,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     final wasPlaying = _controller.value.isPlaying;
     final currentSpeed = _controller.value.playbackSpeed;
     
+    // Show loading indicator
+    setState(() {
+      _isInitialized = false;
+    });
+    
     // Dispose old controller
     await _controller.dispose();
     
@@ -83,32 +88,54 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       Uri.parse(VideoQualityHelper.getQualityUrl(_originalVideoUrl, quality)),
     );
     
-    await _controller.initialize();
-    
-    // IMPORTANT: Re-add listener to keep UI updating
-    _controller.addListener(() {
-      if (mounted) {
-        setState(() {});
+    try {
+      await _controller.initialize();
+      
+      // IMPORTANT: Re-add listener to keep UI updating
+      _controller.addListener(() {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+      
+      // Restore all states
+      _controller.setLooping(_isLooping);
+      _controller.setPlaybackSpeed(currentSpeed);
+      _controller.setVolume(_isMuted ? 0.0 : 1.0);
+      
+      // Restore position and state
+      await _controller.seekTo(currentPosition);
+      if (wasPlaying) {
+        await _controller.play();
       }
-    });
-    
-    // Restore all states
-    _controller.setLooping(_isLooping);
-    _controller.setPlaybackSpeed(currentSpeed);
-    _controller.setVolume(_isMuted ? 0.0 : 1.0);
-    
-    // Restore position and state
-    await _controller.seekTo(currentPosition);
-    if (wasPlaying) {
-      await _controller.play();
+      
+      // Force rebuild to update aspect ratio
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+      
+      print('🎬 Quality changed to $quality successfully');
+    } catch (e) {
+      print('❌ Error changing quality: $e');
+      // If quality change fails, revert to original
+      _currentQuality = VideoQuality.auto;
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(_originalVideoUrl),
+      );
+      await _controller.initialize();
+      _controller.addListener(() {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     }
-    
-    // Force rebuild to update aspect ratio
-    if (mounted) {
-      setState(() {});
-    }
-    
-    print('🎬 Quality changed to $quality');
   }
 
   void _enableSpeedBoost() {
@@ -564,7 +591,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _disableSpeedBoost();
       },
       child: AspectRatio(
-        aspectRatio: _controller.value.aspectRatio,
+        aspectRatio: _controller.value.aspectRatio.isFinite 
+            ? _controller.value.aspectRatio 
+            : 16 / 9,
         child: Container(
           color: Colors.black,
           child: Stack(
@@ -637,12 +666,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                       ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Stack(
                     children: [
-                      const SizedBox(height: 50),
-                      
-                      // Center controls with skip buttons
+                      // Center controls with skip buttons - positioned in true center
                       Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -652,12 +678,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                               icon: const Icon(
                                 Icons.replay_10,
                                 color: Colors.white,
-                                size: 48,
+                                size: 36,
                               ),
                               onPressed: _skipBackward,
                             ),
                             
-                            const SizedBox(width: 32),
+                            const SizedBox(width: 24),
                             
                             // Play/Pause
                             IconButton(
@@ -666,7 +692,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                                     ? Icons.pause_circle_filled
                                     : Icons.play_circle_filled,
                                 color: Colors.white,
-                                size: 64,
+                                size: 48,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -679,14 +705,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                               },
                             ),
                             
-                            const SizedBox(width: 32),
+                            const SizedBox(width: 24),
                             
                             // Skip forward 10s
                             IconButton(
                               icon: const Icon(
                                 Icons.forward_10,
                                 color: Colors.white,
-                                size: 48,
+                                size: 36,
                               ),
                               onPressed: _skipForward,
                             ),
@@ -694,41 +720,61 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                         ),
                       ),
                       
-                      // Bottom controls
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            Text(
-                              _formatDuration(_controller.value.position),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                      // Progress bar with settings and fullscreen buttons on the right - positioned at the very bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  _formatDuration(_controller.value.position),
+                                  style: const TextStyle(color: Colors.white, fontSize: 9),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 2.0,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.0),
+                                    ),
+                                    child: Slider(
+                                      value: _controller.value.position.inSeconds.toDouble(),
+                                      max: _controller.value.duration.inSeconds.toDouble(),
+                                      activeColor: Colors.red,
+                                      inactiveColor: Colors.white30,
+                                      onChanged: (value) {
+                                        _controller.seekTo(Duration(seconds: value.toInt()));
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatDuration(_controller.value.duration),
+                                  style: const TextStyle(color: Colors.white, fontSize: 9),
+                                ),
+                                const SizedBox(width: 4),
+                                // Settings button
+                                IconButton(
+                                  icon: const Icon(Icons.settings, color: Colors.white, size: 16),
+                                  onPressed: _showSettings,
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                ),
+                                // Fullscreen button
+                                IconButton(
+                                  icon: const Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                                  onPressed: _openFullscreen,
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                ),
+                              ],
                             ),
-                            Expanded(
-                              child: Slider(
-                                value: _controller.value.position.inSeconds.toDouble(),
-                                max: _controller.value.duration.inSeconds.toDouble(),
-                                activeColor: Colors.red,
-                                inactiveColor: Colors.white30,
-                                onChanged: (value) {
-                                  _controller.seekTo(Duration(seconds: value.toInt()));
-                                },
-                              ),
-                            ),
-                            Text(
-                              _formatDuration(_controller.value.duration),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                            // Settings button
-                            IconButton(
-                              icon: const Icon(Icons.settings, color: Colors.white, size: 20),
-                              onPressed: _showSettings,
-                            ),
-                            // Fullscreen button
-                            IconButton(
-                              icon: const Icon(Icons.fullscreen, color: Colors.white),
-                              onPressed: _openFullscreen,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
@@ -738,8 +784,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               // Captions button (top right, below 2x indicator)
               if (_showControls && !_isScreenLocked)
                 Positioned(
-                  top: 60,
-                  right: 16,
+                  top: 16,
+                  right: 60,
                   child: IconButton(
                     icon: const Icon(Icons.closed_caption, color: Colors.white, size: 24),
                     style: IconButton.styleFrom(
