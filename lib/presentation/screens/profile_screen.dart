@@ -11,6 +11,7 @@ import 'login_screen.dart';
 import 'video_playing_screen.dart';
 import 'shorts_screen_new.dart';
 import 'creator_profile_screen.dart';
+import 'image_viewer_screen.dart';
 import 'moderation_screen.dart';
 import 'notifications_screen.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -737,7 +738,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   // New: Your Account Tab with nested tabs for Videos/Shorts and Channel Stats
   Widget _buildYourAccountTab(String userId, dynamic user) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           // Channel Stats Section - More compact
@@ -826,6 +827,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               tabs: const [
                 Tab(text: 'Your Videos'),
                 Tab(text: 'Your Shorts'),
+                Tab(text: 'Your Images'),
               ],
             ),
           ),
@@ -836,6 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 _buildVideosTab(userId),
                 _buildShortsTab(userId),
+                _buildImagesTab(userId),
               ],
             ),
           ),
@@ -940,6 +943,180 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           itemBuilder: (context, index) {
             final short = snapshot.data!.docs[index];
             return _buildShortItem(short);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildImagesTab(String userId) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('image_posts')
+          .where('uploadedBy', isEqualTo: userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.red),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
+              'No image posts uploaded yet',
+              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+            ),
+          );
+        }
+
+        // Sort by timestamp desc client-side to avoid composite index requirement
+        final docs = snapshot.data!.docs.toList()
+          ..sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>?;
+            final bData = b.data() as Map<String, dynamic>?;
+            final aTs = aData?['timestamp'];
+            final bTs = bData?['timestamp'];
+            final aTime = aTs is Timestamp ? aTs.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+            final bTime = bTs is Timestamp ? bTs.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+            return bTime.compareTo(aTime);
+          });
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.8,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final List imageUrls = (data['imageUrls'] as List?) ?? const [];
+            final String coverUrl = imageUrls.isNotEmpty ? (imageUrls.first as String) : '';
+
+            return Card(
+              color: Colors.grey[900],
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ImageViewerScreen(
+                        imageUrls: imageUrls.cast<String>(),
+                        title: data['title'] ?? 'Untitled',
+                        channelName: data['channelName'] ?? 'Unknown',
+                        timestamp: (() {
+                          final ts = data['timestamp'];
+                          if (ts == null) return '';
+                          if (ts is Timestamp) {
+                            return ts.toDate().toIso8601String();
+                          }
+                          return ts.toString();
+                        })(),
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Stack(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image cover
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: CachedNetworkImage(
+                              imageUrl: coverUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[800],
+                                child: const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['title'] ?? 'Untitled',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${imageUrls.length} image${imageUrls.length == 1 ? '' : 's'}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Delete button
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                        ),
+                        onPressed: () => _confirmDeleteContent(doc.id, 'image_post'),
+                      ),
+                    ),
+
+                    // Image count badge
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.collections_outlined, color: Colors.white, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              imageUrls.length.toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           },
         );
       },
@@ -1748,11 +1925,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.grey[900],
         title: Text(
-          'Delete ${type == 'video' ? 'Video' : 'Short'}?',
+          'Delete ${type == 'video' ? 'Video' : type == 'short' ? 'Short' : 'Image Post'}?',
           style: const TextStyle(color: Colors.white),
         ),
         content: Text(
-          'This $type will be permanently deleted.',
+          'This ${type == 'image_post' ? 'image post' : type} will be permanently deleted.',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -1773,7 +1950,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       try {
         // Delete the content
         await FirebaseFirestore.instance
-            .collection(type == 'video' ? 'videos' : 'shorts')
+            .collection(type == 'video' ? 'videos' : type == 'short' ? 'shorts' : 'image_posts')
             .doc(id)
             .delete();
 
@@ -1794,11 +1971,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   'uploadedVideosCount': FieldValue.increment(-1),
                 });
               }
-            } else {
+            } else if (type == 'short') {
               final currentCount = data['uploadedShortsCount'] ?? 0;
               if (currentCount > 0) {
                 await userRef.update({
                   'uploadedShortsCount': FieldValue.increment(-1),
+                });
+              }
+            } else if (type == 'image_post') {
+              final currentCount = data['uploadedImagePostsCount'] ?? 0;
+              if (currentCount > 0) {
+                await userRef.update({
+                  'uploadedImagePostsCount': FieldValue.increment(-1),
                 });
               }
             }
@@ -1808,14 +1992,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         if (mounted) {
           SnackBarHelper.showSuccess(
             context,
-            '${type == 'video' ? 'Video' : 'Short'} deleted successfully',
+            '${type == 'video' ? 'Video' : type == 'short' ? 'Short' : 'Image post'} deleted successfully',
           );
         }
       } catch (e) {
         if (mounted) {
           SnackBarHelper.showError(
             context,
-            'Error deleting $type: $e',
+            'Error deleting ${type == 'image_post' ? 'image post' : type}: $e',
           );
         }
       }

@@ -327,6 +327,14 @@ class UploadProvider extends ChangeNotifier {
         'type': 'image_post',
       });
 
+      // Update user's image posts count
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+        'uploadedImagePostsCount': FieldValue.increment(1),
+      });
+
       _uploadProgress = 0.9;
       notifyListeners();
 

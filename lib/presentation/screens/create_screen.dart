@@ -46,6 +46,22 @@ class _CreateScreenState extends State<CreateScreen> {
     }
   }
 
+  Future<void> _captureVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+
+      if (video != null) {
+        setState(() {
+          _selectedVideo = File(video.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error capturing video: $e');
+      }
+    }
+  }
+
   Future<void> _pickImages() async {
     try {
       final List<XFile> images = await _picker.pickMultiImage();
@@ -74,6 +90,22 @@ class _CreateScreenState extends State<CreateScreen> {
     } catch (e) {
       if (mounted) {
         SnackBarHelper.showError(context, 'Error picking image: $e');
+      }
+    }
+  }
+
+  Future<void> _captureSingleImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      
+      if (image != null) {
+        setState(() {
+          _selectedImages = [File(image.path)];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error capturing image: $e');
       }
     }
   }
@@ -372,6 +404,15 @@ class _CreateScreenState extends State<CreateScreen> {
                                 letterSpacing: 0.3,
                               ),
                             ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Pick a type (Video, Short, or Image Post) before uploading.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[400],
+                                height: 1.2,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             Column(
                               children: [
@@ -651,7 +692,8 @@ class _CreateScreenState extends State<CreateScreen> {
                 const SizedBox(height: 28),
 
                 // Video Picker with Glassy Effect
-                TweenAnimationBuilder(
+                if (_uploadType != UploadType.image)
+                  TweenAnimationBuilder(
                   duration: const Duration(milliseconds: 500),
                   tween: Tween<double>(begin: 0, end: 1),
                   builder: (context, double value, child) {
@@ -793,39 +835,55 @@ class _CreateScreenState extends State<CreateScreen> {
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[800],
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.grey[700]!,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.touch_app,
-                                              size: 16,
-                                              color: Colors.grey[500],
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 6,
                                             ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'From Gallery',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[400],
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[800],
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: Colors.grey[700]!,
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.touch_app, size: 16, color: Colors.grey[500]),
+                                                const SizedBox(width: 6),
+                                                Text('From Gallery', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          GestureDetector(
+                                            onTap: _captureVideo,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.camera_alt, size: 16, color: Colors.red),
+                                                  SizedBox(width: 6),
+                                                  Text('From Camera', style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -849,6 +907,48 @@ class _CreateScreenState extends State<CreateScreen> {
                           opacity: value,
                           child: Column(
                             children: [
+                              // Tip for image selection modes
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    'Choose Single or Multiple images from gallery, or capture now.',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                                  ),
+                                ),
+                              ),
+                              // Camera Button (moved above single image)
+                              GestureDetector(
+                                onTap: _captureSingleImage,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.red.withValues(alpha: 0.5),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.camera_alt, color: Colors.red, size: 24),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Capture with Camera',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               // Single Image Option
                               GestureDetector(
                                 onTap: _pickSingleImage,
@@ -924,6 +1024,14 @@ class _CreateScreenState extends State<CreateScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Tip: Tap to pick one image from gallery.',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                ),
+                              ),
                               const SizedBox(height: 16),
                               // Multiple Images Option
                               GestureDetector(
@@ -977,7 +1085,7 @@ class _CreateScreenState extends State<CreateScreen> {
                                             if (_selectedImages.length > 1)
                                               Text(
                                                 '${_selectedImages.length} selected',
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.red,
                                                   fontWeight: FontWeight.w600,
@@ -1017,6 +1125,14 @@ class _CreateScreenState extends State<CreateScreen> {
                                         ),
                                     ],
                                   ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Tip: Tap to pick multiple images from gallery (carousel).',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                 ),
                               ),
                             ],

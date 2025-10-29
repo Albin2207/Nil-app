@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../../core/utils/snackbar_helper.dart';
 import 'video_playing_screen.dart';
+import 'image_viewer_screen.dart';
 
 class CreatorProfileScreen extends StatefulWidget {
   final String creatorId;
@@ -28,12 +29,13 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
   late TabController _tabController;
   int _videosCount = 0;
   int _shortsCount = 0;
+  int _imagePostsCount = 0;
   int _subscribersCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadCreatorStats();
   }
 
@@ -52,9 +54,27 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
 
       if (userDoc.exists) {
         final data = userDoc.data()!;
+        int imagePostsCount = data['uploadedImagePostsCount'] ?? 0;
+        final hasImageCountField = data.containsKey('uploadedImagePostsCount');
+
+        // Fallback: if field missing, compute from image_posts and persist
+        if (!hasImageCountField) {
+          final imagesSnapshot = await FirebaseFirestore.instance
+              .collection('image_posts')
+              .where('uploadedBy', isEqualTo: widget.creatorId)
+              .get();
+          imagePostsCount = imagesSnapshot.docs.length;
+          // Persist back for future fast reads
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.creatorId)
+              .set({'uploadedImagePostsCount': imagePostsCount}, SetOptions(merge: true));
+        }
+
         setState(() {
           _videosCount = data['uploadedVideosCount'] ?? 0;
           _shortsCount = data['uploadedShortsCount'] ?? 0;
+          _imagePostsCount = imagePostsCount;
           _subscribersCount = data['subscribersCount'] ?? 0;
         });
       }
@@ -163,16 +183,23 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
                       height: 30,
                       width: 1,
                       color: Colors.grey[300],
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
                     ),
                     _buildStat(_videosCount.toString(), 'Videos'),
                     Container(
                       height: 30,
                       width: 1,
                       color: Colors.grey[300],
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
                     ),
                     _buildStat(_shortsCount.toString(), 'Shorts'),
+                    Container(
+                      height: 30,
+                      width: 1,
+                      color: Colors.grey[300],
+                      margin: const EdgeInsets.symmetric(horizontal: 15),
+                    ),
+                    _buildStat(_imagePostsCount.toString(), 'Images'),
                   ],
                 ),
                 
@@ -288,6 +315,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
               tabs: const [
                 Tab(text: 'Videos'),
                 Tab(text: 'Shorts'),
+                Tab(text: 'Images'),
               ],
             ),
           ),
@@ -299,6 +327,7 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
               children: [
                 _buildVideosTab(),
                 _buildShortsTab(),
+                _buildImagePostsTab(),
               ],
             ),
           ),
@@ -529,6 +558,164 @@ class _CreatorProfileScreenState extends State<CreatorProfileScreen>
                     ],
                   ),
                 ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildImagePostsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('image_posts')
+          .where('uploadedBy', isEqualTo: widget.creatorId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.red));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.image_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No image posts yet',
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Sort documents by timestamp descending
+        final sortedDocs = snapshot.data!.docs.toList()
+          ..sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>?;
+            final bData = b.data() as Map<String, dynamic>?;
+            final aTimestamp = aData?['timestamp'] as Timestamp?;
+            final bTimestamp = bData?['timestamp'] as Timestamp?;
+            if (aTimestamp == null && bTimestamp == null) return 0;
+            if (aTimestamp == null) return 1;
+            if (bTimestamp == null) return -1;
+            return bTimestamp.compareTo(aTimestamp);
+          });
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.8,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: sortedDocs.length,
+          itemBuilder: (context, index) {
+            final imagePost = sortedDocs[index];
+            final data = imagePost.data() as Map<String, dynamic>;
+            
+            return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewerScreen(
+                      imageUrls: List<String>.from(data['imageUrls'] ?? []),
+                      title: data['title'] ?? 'Untitled',
+                      channelName: data['channelName'] ?? 'Unknown',
+                      timestamp: (() {
+                        final ts = data['timestamp'];
+                        if (ts == null) return '';
+                        if (ts is Timestamp) {
+                          return ts.toDate().toIso8601String();
+                        }
+                        return ts.toString();
+                      })(),
+                    ),
+                  ),
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[300],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (data['imageUrls'] != null && (data['imageUrls'] as List).isNotEmpty)
+                              CachedNetworkImage(
+                                imageUrl: data['imageUrls'][0],
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator(color: Colors.red),
+                                ),
+                                errorWidget: (context, url, error) => const Icon(Icons.error),
+                              )
+                            else
+                              const Icon(Icons.image, size: 40),
+
+                            // Image count badge
+                            Positioned(
+                              right: 6,
+                              bottom: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.collections_outlined, color: Colors.white, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      ((data['imageUrls'] as List?)?.length ?? 0).toString(),
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Title
+                  Text(
+                    data['title'] ?? 'Untitled',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Likes
+                  Text(
+                    '${_formatCount(data['likes'] ?? 0)} likes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             );
           },
