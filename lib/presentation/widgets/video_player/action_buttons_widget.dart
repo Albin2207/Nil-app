@@ -708,7 +708,6 @@ class _ActionButton extends StatefulWidget {
 class _ActionButtonState extends State<_ActionButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
@@ -732,16 +731,13 @@ class _ActionButtonState extends State<_ActionButton> with SingleTickerProviderS
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) {
-        setState(() => _isPressed = true);
         _controller.forward();
       },
       onTapUp: (_) {
-        setState(() => _isPressed = false);
         _controller.reverse();
         widget.onTap();
       },
       onTapCancel: () {
-        setState(() => _isPressed = false);
         _controller.reverse();
       },
       child: ScaleTransition(

@@ -176,14 +176,35 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // User tokens collection (for FCM tokens)
-    match /user_tokens/{userId} {
-      // Users can only read their own token
-      allow read: if request.auth != null && request.auth.uid == userId;
-      // Users can create/update their own token
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      // Users can delete their own token
-      allow delete: if request.auth != null && request.auth.uid == userId;
+    // Image posts collection
+    match /image_posts/{imagePostId} {
+      // Anyone can read image posts
+      allow read: if true;
+      // Only authenticated users can create image posts
+      allow create: if request.auth != null;
+      // Users can update their own image posts OR anyone can update likes/dislikes
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.uploadedBy ||
+        (request.resource.data.keys().hasOnly(['likes', 'dislikes']) && 
+         request.resource.data.likes is int && 
+         request.resource.data.dislikes is int)
+      );
+      // Users can delete their own image posts
+      allow delete: if request.auth != null && request.auth.uid == resource.data.uploadedBy;
+      
+      // Image post comments subcollection
+      match /comments/{commentId} {
+        // Anyone can read comments
+        allow read: if true;
+        // Anyone can create comments
+        allow create: if true;
+        // Anyone can update (for likes/dislikes)
+        allow update: if true;
+        // Delete: Only owner if userId exists, otherwise any auth user
+        allow delete: if request.auth != null && 
+          (!resource.data.keys().hasAny(['userId']) || 
+           request.auth.uid == resource.data.userId);
+      }
     }
   }
 }

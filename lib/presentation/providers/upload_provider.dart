@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
-enum UploadType { video, short }
+enum UploadType { video, short, image }
 
 class UploadProvider extends ChangeNotifier {
   bool _isUploading = false;
@@ -264,5 +265,137 @@ class UploadProvider extends ChangeNotifier {
       // Don't fail the upload if notification fails
     }
   }
-}
 
+  /// Upload image post to Cloudinary and Firestore
+  Future<bool> uploadImagePost({
+    required List<File> imageFiles,
+    required String title,
+    required String description,
+    required String userId,
+    required String userName,
+  }) async {
+    
+    _isUploading = true;
+    _uploadProgress = 0.0;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Upload images to Cloudinary
+      _uploadProgress = 0.2;
+      notifyListeners();
+
+      final List<String> imageUrls = [];
+      final int totalImages = imageFiles.length;
+      
+      for (int i = 0; i < imageFiles.length; i++) {
+        final CloudinaryResponse imageResponse = await cloudinary.uploadFile(
+          CloudinaryFile.fromFile(
+            imageFiles[i].path,
+            resourceType: CloudinaryResourceType.Image,
+            folder: 'image_posts',
+          ),
+        );
+        imageUrls.add(imageResponse.secureUrl);
+        
+        // Update progress
+        _uploadProgress = 0.2 + (0.6 * (i + 1) / totalImages);
+        notifyListeners();
+      }
+
+      _uploadProgress = 0.8;
+      notifyListeners();
+
+      // Store in Firestore
+      final imagePostRef = FirebaseFirestore.instance.collection('image_posts').doc();
+      final imagePostId = imagePostRef.id;
+
+      await imagePostRef.set({
+        'id': imagePostId,
+        'title': title,
+        'description': description,
+        'imageUrls': imageUrls,
+        'imageCount': imageUrls.length,
+        'uploadedBy': userId,
+        'channelName': userName,
+        'channelAvatar': FirebaseAuth.instance.currentUser?.photoURL ?? '',
+        'timestamp': FieldValue.serverTimestamp(),
+        'likes': 0,
+        'dislikes': 0,
+        'comments': 0,
+        'shares': 0,
+        'type': 'image_post',
+      });
+
+      _uploadProgress = 0.9;
+      notifyListeners();
+
+      // Send notifications to users
+      await _sendImagePostNotificationToUsers(
+        title: title,
+        userName: userName,
+        imagePostId: imagePostId,
+        userId: userId,
+      );
+
+      _uploadProgress = 1.0;
+      notifyListeners();
+
+      print('✅ Image post uploaded successfully');
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to upload image post: $e';
+      print('❌ Error uploading image post: $e');
+      return false;
+    } finally {
+      _isUploading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Store image post notification in Firestore for users to see
+  Future<void> _sendImagePostNotificationToUsers({
+    required String title,
+    required String userName,
+    required String imagePostId,
+    required String userId,
+  }) async {
+    try {
+      // Get all users from Firestore
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      
+      if (usersSnapshot.docs.isEmpty) return;
+      
+      // Create notification for each user
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (final userDoc in usersSnapshot.docs) {
+        final notificationRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userDoc.id)
+            .collection('notifications')
+            .doc();
+        
+        batch.set(notificationRef, {
+          'type': 'image_post',
+          'title': '📸 New Image Post!',
+          'body': '$title by $userName',
+          'contentType': 'image_post',
+          'contentId': imagePostId,
+          'channelId': userId,
+          'channelName': userName,
+          'postTitle': title,
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+      }
+      
+      await batch.commit();
+      print('✅ Image post notifications sent to ${usersSnapshot.docs.length} users');
+    } catch (e) {
+      print('❌ Error sending image post notifications: $e');
+    }
+  }
+}

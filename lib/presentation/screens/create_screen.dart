@@ -20,6 +20,7 @@ class _CreateScreenState extends State<CreateScreen> {
 
   File? _selectedVideo;
   File? _selectedThumbnail;
+  List<File> _selectedImages = [];
   UploadType _uploadType = UploadType.video;
 
   @override
@@ -45,6 +46,37 @@ class _CreateScreenState extends State<CreateScreen> {
     }
   }
 
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages = images.map((image) => File(image.path)).toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error picking images: $e');
+      }
+    }
+  }
+
+  Future<void> _pickSingleImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      
+      if (image != null) {
+        setState(() {
+          _selectedImages = [File(image.path)];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error picking image: $e');
+      }
+    }
+  }
   Future<void> _pickThumbnail() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -57,6 +89,68 @@ class _CreateScreenState extends State<CreateScreen> {
     } catch (e) {
       if (mounted) {
         SnackBarHelper.showError(context, 'Error picking thumbnail: $e');
+      }
+    }
+  }
+
+  Future<void> _uploadImagePost() async {
+    if (_selectedImages.isEmpty) {
+      SnackBarHelper.showInfo(
+        context,
+        'Please select at least one image',
+        color: Colors.orange,
+        icon: Icons.image,
+      );
+      return;
+    }
+
+    if (_titleController.text.trim().isEmpty) {
+      SnackBarHelper.showInfo(
+        context,
+        'Please enter a title',
+        color: Colors.orange,
+        icon: Icons.title,
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final uploadProvider = context.read<UploadProvider>();
+
+    final user = authProvider.firebaseUser;
+    if (user == null) {
+      SnackBarHelper.showError(context, 'Please login to upload');
+      return;
+    }
+
+    final userName = user.displayName ?? user.email?.split('@')[0] ?? 'User';
+
+    final success = await uploadProvider.uploadImagePost(
+      imageFiles: _selectedImages,
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      userId: user.uid,
+      userName: userName,
+    );
+
+    if (mounted) {
+      if (success) {
+        SnackBarHelper.showSuccess(
+          context,
+          'Image post uploaded successfully!',
+          icon: Icons.cloud_upload,
+        );
+        // Reset form
+        setState(() {
+          _selectedImages.clear();
+          _titleController.clear();
+          _descriptionController.clear();
+        });
+      } else {
+        SnackBarHelper.showError(
+          context,
+          uploadProvider.errorMessage ?? 'Upload failed',
+        );
       }
     }
   }
@@ -279,185 +373,275 @@ class _CreateScreenState extends State<CreateScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Row(
+                            Column(
                               children: [
-                                Expanded(
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(
-                                          () => _uploadType = UploadType.video,
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                              _uploadType == UploadType.video
-                                              ? LinearGradient(
-                                                  colors: [
-                                                    Colors.red.withValues(
-                                                      alpha: 0.9,
-                                                    ),
-                                                    Colors.red.withValues(
-                                                      alpha: 0.7,
-                                                    ),
-                                                  ],
-                                                )
-                                              : LinearGradient(
-                                                  colors: [
-                                                    Colors.grey[800]!,
-                                                    Colors.grey[850]!,
-                                                  ],
-                                                ),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                          border: Border.all(
-                                            color:
-                                                _uploadType == UploadType.video
-                                                ? Colors.red
-                                                : Colors.grey[600]!,
-                                            width: 2,
-                                          ),
-                                          boxShadow:
-                                              _uploadType == UploadType.video
-                                              ? [
-                                                  BoxShadow(
-                                                    color: Colors.red
-                                                        .withValues(alpha: 0.4),
-                                                    blurRadius: 15,
-                                                    offset: const Offset(0, 5),
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.videocam,
-                                              color:
-                                                  _uploadType ==
-                                                      UploadType.video
-                                                  ? Colors.white
-                                                  : Colors.grey[400],
-                                              size: 22,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 300),
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(
+                                              () => _uploadType = UploadType.video,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(14),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Video',
-                                              style: TextStyle(
-                                                color:
-                                                    _uploadType ==
-                                                        UploadType.video
-                                                    ? Colors.white
-                                                    : Colors.grey[400],
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
+                                            decoration: BoxDecoration(
+                                              gradient:
+                                                  _uploadType == UploadType.video
+                                                  ? LinearGradient(
+                                                      colors: [
+                                                        Colors.red.withValues(
+                                                          alpha: 0.9,
+                                                        ),
+                                                        Colors.red.withValues(
+                                                          alpha: 0.7,
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : LinearGradient(
+                                                      colors: [
+                                                        Colors.grey[800]!,
+                                                        Colors.grey[850]!,
+                                                      ],
+                                                    ),
+                                              borderRadius: BorderRadius.circular(
+                                                14,
                                               ),
+                                              border: Border.all(
+                                                color:
+                                                    _uploadType == UploadType.video
+                                                    ? Colors.red
+                                                    : Colors.grey[600]!,
+                                                width: 2,
+                                              ),
+                                              boxShadow:
+                                                  _uploadType == UploadType.video
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: Colors.red
+                                                            .withValues(alpha: 0.4),
+                                                        blurRadius: 15,
+                                                        offset: const Offset(0, 5),
+                                                      ),
+                                                    ]
+                                                  : null,
                                             ),
-                                          ],
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.videocam,
+                                                  color:
+                                                      _uploadType ==
+                                                          UploadType.video
+                                                      ? Colors.white
+                                                      : Colors.grey[400],
+                                                  size: 22,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Video',
+                                                  style: TextStyle(
+                                                    color:
+                                                        _uploadType ==
+                                                            UploadType.video
+                                                        ? Colors.white
+                                                        : Colors.grey[400],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(
-                                          () => _uploadType = UploadType.short,
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                              _uploadType == UploadType.short
-                                              ? LinearGradient(
-                                                  colors: [
-                                                    Colors.red.withValues(
-                                                      alpha: 0.9,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 300),
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(
+                                              () => _uploadType = UploadType.short,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(14),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient:
+                                                  _uploadType == UploadType.short
+                                                  ? LinearGradient(
+                                                      colors: [
+                                                        Colors.red.withValues(
+                                                          alpha: 0.9,
+                                                        ),
+                                                        Colors.red.withValues(
+                                                          alpha: 0.7,
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : LinearGradient(
+                                                      colors: [
+                                                        Colors.grey[800]!,
+                                                        Colors.grey[850]!,
+                                                      ],
                                                     ),
-                                                    Colors.red.withValues(
-                                                      alpha: 0.7,
-                                                    ),
-                                                  ],
-                                                )
-                                              : LinearGradient(
-                                                  colors: [
-                                                    Colors.grey[800]!,
-                                                    Colors.grey[850]!,
-                                                  ],
+                                              borderRadius: BorderRadius.circular(
+                                                14,
+                                              ),
+                                              border: Border.all(
+                                                color:
+                                                    _uploadType == UploadType.short
+                                                    ? Colors.red
+                                                    : Colors.grey[600]!,
+                                                width: 2,
+                                              ),
+                                              boxShadow:
+                                                  _uploadType == UploadType.short
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: Colors.red
+                                                            .withValues(alpha: 0.4),
+                                                        blurRadius: 15,
+                                                        offset: const Offset(0, 5),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.phonelink,
+                                                  color:
+                                                      _uploadType ==
+                                                          UploadType.short
+                                                      ? Colors.white
+                                                      : Colors.grey[400],
+                                                  size: 22,
                                                 ),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                          border: Border.all(
-                                            color:
-                                                _uploadType == UploadType.short
-                                                ? Colors.red
-                                                : Colors.grey[600]!,
-                                            width: 2,
-                                          ),
-                                          boxShadow:
-                                              _uploadType == UploadType.short
-                                              ? [
-                                                  BoxShadow(
-                                                    color: Colors.red
-                                                        .withValues(alpha: 0.4),
-                                                    blurRadius: 15,
-                                                    offset: const Offset(0, 5),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Short',
+                                                  style: TextStyle(
+                                                    color:
+                                                        _uploadType ==
+                                                            UploadType.short
+                                                        ? Colors.white
+                                                        : Colors.grey[400],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
                                                   ),
-                                                ]
-                                              : null,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.phonelink,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                // Image Post Option
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(
+                                        () => _uploadType = UploadType.image,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient:
+                                            _uploadType == UploadType.image
+                                            ? LinearGradient(
+                                                colors: [
+                                                  Colors.red.withValues(
+                                                    alpha: 0.9,
+                                                  ),
+                                                  Colors.red.withValues(
+                                                    alpha: 0.7,
+                                                  ),
+                                                ],
+                                              )
+                                            : LinearGradient(
+                                                colors: [
+                                                  Colors.grey[800]!,
+                                                  Colors.grey[850]!,
+                                                ],
+                                              ),
+                                        borderRadius: BorderRadius.circular(
+                                          14,
+                                        ),
+                                        border: Border.all(
+                                          color:
+                                              _uploadType == UploadType.image
+                                              ? Colors.red
+                                              : Colors.grey[600]!,
+                                          width: 2,
+                                        ),
+                                        boxShadow:
+                                            _uploadType == UploadType.image
+                                            ? [
+                                                BoxShadow(
+                                                  color: Colors.red
+                                                      .withValues(alpha: 0.4),
+                                                  blurRadius: 15,
+                                                  offset: const Offset(0, 5),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.image,
+                                            color:
+                                                _uploadType == UploadType.image
+                                                ? Colors.white
+                                                : Colors.grey[400],
+                                            size: 22,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Image Post',
+                                            style: TextStyle(
                                               color:
-                                                  _uploadType ==
-                                                      UploadType.short
+                                                  _uploadType == UploadType.image
                                                   ? Colors.white
                                                   : Colors.grey[400],
-                                              size: 22,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Short',
-                                              style: TextStyle(
-                                                color:
-                                                    _uploadType ==
-                                                        UploadType.short
-                                                    ? Colors.white
-                                                    : Colors.grey[400],
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
-            ),
+                            ),
           ],
         ),
                       ),
@@ -652,6 +836,197 @@ class _CreateScreenState extends State<CreateScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
+
+                // Image Picker (only when image upload type is selected)
+                if (_uploadType == UploadType.image) ...[
+                  TweenAnimationBuilder(
+                    duration: const Duration(milliseconds: 500),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, double value, child) {
+                      return Transform.translate(
+                        offset: Offset(0, 30 * (1 - value)),
+                        child: Opacity(
+                          opacity: value,
+                          child: Column(
+                            children: [
+                              // Single Image Option
+                              GestureDetector(
+                                onTap: _pickSingleImage,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: _selectedImages.length == 1
+                                          ? [
+                                              Colors.red.withValues(alpha: 0.15),
+                                              Colors.grey[900]!,
+                                            ]
+                                          : [Colors.grey[850]!, Colors.grey[900]!],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _selectedImages.length == 1
+                                          ? Colors.red.withValues(alpha: 0.5)
+                                          : Colors.grey[700]!,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.image_outlined,
+                                              size: 40,
+                                              color: _selectedImages.length == 1
+                                                  ? Colors.red
+                                                  : Colors.grey[500],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Single Image',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: _selectedImages.length == 1
+                                                    ? Colors.white
+                                                    : Colors.grey[400],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (_selectedImages.length == 1)
+                                        Expanded(
+                                          child: Container(
+                                            margin: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Image.file(
+                                                _selectedImages.first,
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Multiple Images Option
+                              GestureDetector(
+                                onTap: _pickImages,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: _selectedImages.length > 1
+                                          ? [
+                                              Colors.red.withValues(alpha: 0.15),
+                                              Colors.grey[900]!,
+                                            ]
+                                          : [Colors.grey[850]!, Colors.grey[900]!],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: _selectedImages.length > 1
+                                          ? Colors.red.withValues(alpha: 0.5)
+                                          : Colors.grey[700]!,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.photo_library_outlined,
+                                              size: 40,
+                                              color: _selectedImages.length > 1
+                                                  ? Colors.red
+                                                  : Colors.grey[500],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Multiple Images',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: _selectedImages.length > 1
+                                                    ? Colors.white
+                                                    : Colors.grey[400],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            if (_selectedImages.length > 1)
+                                              Text(
+                                                '${_selectedImages.length} selected',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (_selectedImages.length > 1)
+                                        Expanded(
+                                          child: Container(
+                                            margin: const EdgeInsets.all(8),
+                                            child: GridView.builder(
+                                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 2,
+                                                crossAxisSpacing: 4,
+                                                mainAxisSpacing: 4,
+                                              ),
+                                              itemCount: _selectedImages.length > 4 ? 4 : _selectedImages.length,
+                                              itemBuilder: (context, index) {
+                                                return Container(
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                                                  ),
+                                                  child: ClipRRect(
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    child: Image.file(
+                                                      _selectedImages[index],
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 // Thumbnail Picker with Glassy Effect
                 TweenAnimationBuilder(
@@ -910,11 +1285,20 @@ class _CreateScreenState extends State<CreateScreen> {
                             ],
                           ),
                           child: ElevatedButton.icon(
-                            onPressed: _uploadVideo,
-                            icon: const Icon(Icons.cloud_upload, size: 24),
-                            label: const Text(
-                              'Upload Content',
-                              style: TextStyle(
+                            onPressed: _uploadType == UploadType.image 
+                                ? _uploadImagePost 
+                                : _uploadVideo,
+                            icon: Icon(
+                              _uploadType == UploadType.image 
+                                  ? Icons.image 
+                                  : Icons.cloud_upload, 
+                              size: 24
+                            ),
+                            label: Text(
+                              _uploadType == UploadType.image 
+                                  ? 'Upload Image Post' 
+                                  : 'Upload Content',
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,

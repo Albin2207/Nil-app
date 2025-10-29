@@ -6,13 +6,13 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'core/services/firebase_messaging_background.dart';
-import 'core/services/fcm_token_service.dart';
-import 'core/services/notification_topics_service.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/providers/image_post_provider.dart';
 import 'presentation/providers/movies_provider.dart';
 import 'presentation/providers/shorts_provider_new.dart';
 import 'presentation/providers/video_provider.dart';
 import 'presentation/providers/comment_provider.dart';
+import 'presentation/providers/image_comment_provider.dart';
 import 'presentation/providers/tmdb_provider.dart';
 import 'presentation/providers/upload_provider.dart';
 import 'presentation/providers/download_provider.dart';
@@ -61,6 +61,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MovieProvider()),
         ChangeNotifierProvider(create: (_) => VideoProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
+        ChangeNotifierProvider(create: (_) => ImageCommentProvider()),
+        ChangeNotifierProvider(create: (_) => ImagePostProvider()),
         ChangeNotifierProvider(create: (_) => TmdbProvider()),
         
         // Upload & Download Providers

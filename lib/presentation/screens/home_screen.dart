@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
+import 'dart:async';
 
 import 'video_playing_screen.dart';
 import 'profile_screen.dart';
@@ -12,6 +15,7 @@ import 'notifications_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/download_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../widgets/mixed_feed_widget.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/watch_later_service.dart';
 import '../../core/services/content_preferences_service.dart';
@@ -29,7 +33,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final Set<String> _localNotInterested = {};
   final Set<String> _localBlockedChannels = {};
-  
+
   @override
   Widget build(BuildContext context) {
     final connectivityService = context.watch<ConnectivityService>();
@@ -170,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   
                   return Stack(
                     children: [
-                      IconButton(
+          IconButton(
                         icon: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
@@ -284,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-              ),
+            ),
           ),
         ],
       ),
@@ -304,91 +308,24 @@ class _HomeScreenState extends State<HomeScreen> {
           final notInterestedVideos = prefsSnapshot.data!['notInterested']!;
           final blockedChannels = prefsSnapshot.data!['blockedChannels']!;
 
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('videos')
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: Colors.red));
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.video_library_outlined, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No videos yet',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // Filter out not interested videos and videos from blocked channels
-              final allVideos = snapshot.data!.docs;
-              final filteredVideos = allVideos.where((video) {
-                final data = video.data() as Map<String, dynamic>;
-                final videoId = video.id;
-                final uploadedBy = data['uploadedBy'] ?? '';
-                
-                // Filter out not interested videos (from Firestore OR local state)
-                if (notInterestedVideos.contains(videoId) || _localNotInterested.contains(videoId)) {
-                  return false;
-                }
-                
-                // Filter out videos from blocked channels (from Firestore OR local state)
-                if (blockedChannels.contains(uploadedBy) || _localBlockedChannels.contains(uploadedBy)) {
-                  return false;
-                }
-                
-                return true;
-              }).toList();
-
-              if (filteredVideos.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.video_library_outlined, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No videos to show',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'All available videos are filtered',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: filteredVideos.length,
-                itemBuilder: (context, index) {
-                  return VideoCard(
-                    video: filteredVideos[index],
-                    onMarkNotInterested: (videoId) {
-                      setState(() {
-                        _localNotInterested.add(videoId);
-                      });
-                    },
-                    onBlockChannel: (channelId) {
-                      setState(() {
-                        _localBlockedChannels.add(channelId);
-                      });
-                    },
-                  );
-                },
-              );
+          return MixedFeedWidget(
+            notInterestedVideos: {
+              ...notInterestedVideos,
+              ..._localNotInterested,
+            },
+            blockedChannels: {
+              ...blockedChannels,
+              ..._localBlockedChannels,
+            },
+            onMarkNotInterested: (contentId) {
+              setState(() {
+                _localNotInterested.add(contentId);
+              });
+            },
+            onBlockChannel: (channelId) {
+              setState(() {
+                _localBlockedChannels.add(channelId);
+              });
             },
           );
         },
@@ -417,6 +354,15 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _isPlaying = false;
+  bool _isMuted = true; // Start muted for autoplay
+  final bool _isVisible = false;
+  Timer? _autoplayTimer;
+  Timer? _hideControlsTimer;
+  bool _showControls = false;
 
   @override
   void initState() {
@@ -435,11 +381,105 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
     );
     
     _animationController.forward();
+    
+    // Initialize video controller
+    _initializeVideo();
+  }
+  
+  void _initializeVideo() async {
+    final data = widget.video.data() as Map<String, dynamic>;
+    final videoUrl = data['videoUrl'];
+    
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      
+      try {
+        await _videoController!.initialize();
+        _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+        _videoController!.setLooping(true);
+        
+        // Add listener to update UI when video position changes
+        _videoController!.addListener(() {
+          if (mounted) {
+            setState(() {});
+          }
+        });
+        
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+        }
+      } catch (e) {
+        print('Error initializing video: $e');
+      }
+    }
+  }
+  
+  void _onVisibilityChanged(VisibilityInfo info) {
+    if (info.visibleFraction > 0.5 && !_isPlaying) {
+      // Video is visible, start autoplay timer (2 second delay)
+      _autoplayTimer?.cancel();
+      _autoplayTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted && info.visibleFraction > 0.5) {
+          _playVideo();
+        }
+      });
+    } else if (info.visibleFraction <= 0.5 && _isPlaying) {
+      // Video is not visible, pause immediately
+      _autoplayTimer?.cancel();
+      _pauseVideo();
+    }
+  }
+  
+  void _playVideo() {
+    if (_videoController != null && _isVideoInitialized && mounted) {
+      _videoController!.play();
+      setState(() {
+        _isPlaying = true;
+      });
+    }
+  }
+  
+  void _pauseVideo() {
+    if (_videoController != null && _isPlaying && mounted) {
+      _videoController!.pause();
+      setState(() {
+        _isPlaying = false;
+      });
+    }
+  }
+  
+  void _showControlsTemporarily() {
+    setState(() {
+      _showControls = true;
+    });
+    
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
+  }
+
+  void _toggleMute() {
+    if (_videoController != null && mounted) {
+      setState(() {
+        _isMuted = !_isMuted;
+        _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+      });
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _videoController?.dispose();
+    _autoplayTimer?.cancel();
+    _hideControlsTimer?.cancel();
     super.dispose();
   }
 
@@ -463,110 +503,217 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     final data = widget.video.data() as Map<String, dynamic>;
 
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _slideAnimation.value),
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.red.withValues(alpha: 0.05),
-                    Colors.grey[900]!,
-                  ],
+    return VisibilityDetector(
+      key: Key('video_${widget.video.id}'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _slideAnimation.value),
+            child: Opacity(
+              opacity: _fadeAnimation.value,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.red.withValues(alpha: 0.05),
+                      Colors.grey[900]!,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
-              child: InkWell(
+                child: InkWell(
       onTap: () {
         Navigator.push(
           context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          VideoPlayerScreen(video: widget.video),
-                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(opacity: animation, child: child);
-                      },
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            VideoPlayerScreen(video: widget.video),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
           ),
         );
       },
-                borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Thumbnail
+                      // Video Player or Thumbnail
           Stack(
             children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: Container(
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                            child: Container(
                 width: double.infinity,
-                height: 220,
-                            color: Colors.grey[900],
-                child: data['thumbnailUrl'] != null
+                              height: _isVideoInitialized && _videoController != null
+                                  ? null // Let AspectRatio determine height
+                                  : 220, // Fixed height for thumbnails
+                              color: Colors.grey[900],
+                              child: _isVideoInitialized && _videoController != null
+                                  ? AspectRatio(
+                                      aspectRatio: _videoController!.value.aspectRatio.isFinite 
+                                          ? _videoController!.value.aspectRatio 
+                                          : 16 / 9,
+                                      child: Stack(
+                                        children: [
+                                          VideoPlayer(_videoController!),
+                                          // Play/Pause overlay
+                                          if (!_isPlaying)
+                                            Center(
+                                              child: Container(
+                                                padding: const EdgeInsets.all(12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withValues(alpha: 0.6),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.play_arrow,
+                                                  color: Colors.white,
+                                                  size: 32,
+                                                ),
+                                              ),
+                                            ),
+                                          // Mute button
+                                          Positioned(
+                                            top: 10,
+                                            right: 10,
+                                            child: GestureDetector(
+                                              onTap: _toggleMute,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withValues(alpha: 0.6),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  _isMuted ? Icons.volume_off : Icons.volume_up,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          // Progress slider (always visible when playing)
+                                          if (_isPlaying)
+                                            Positioned(
+                                              bottom: 0,
+                                              left: 0,
+                                              right: 0,
+                                              child: Container(
+                                                height: 30,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      Colors.transparent,
+                                                      Colors.black.withValues(alpha: 0.8),
+                                                    ],
+                                                  ),
+                                                ),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  child: Row(
+                                                    children: [
+                                                      Text(
+                                                        _formatDuration(_videoController!.value.position.inSeconds),
+                                                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: SliderTheme(
+                                                          data: SliderTheme.of(context).copyWith(
+                                                            trackHeight: 2.0,
+                                                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                                                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                                                          ),
+                                                          child: Slider(
+                                                            value: _videoController!.value.position.inSeconds.toDouble(),
+                                                            max: _videoController!.value.duration.inSeconds.toDouble(),
+                                                            activeColor: Colors.red,
+                                                            inactiveColor: Colors.white30,
+                                                            onChanged: (value) {
+                                                              _videoController!.seekTo(Duration(seconds: value.toInt()));
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        _formatDuration(_videoController!.value.duration.inSeconds),
+                                                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    )
+                                  : data['thumbnailUrl'] != null
                     ? Image.network(
                         data['thumbnailUrl'],
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                                      return Center(
-                                        child: Icon(
-                                          Icons.error_outline,
-                                          size: 48,
-                                          color: Colors.grey[600],
-                                        ),
+                                            return Center(
+                                              child: Icon(
+                                                Icons.error_outline,
+                                                size: 48,
+                                                color: Colors.grey[600],
+                                              ),
                           );
                         },
                       )
-                                : Center(
-                                    child: Icon(
-                                      Icons.play_circle_outline,
-                                      size: 64,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
+                                      : Center(
+                                          child: Icon(
+                                            Icons.play_circle_outline,
+                                            size: 64,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                            ),
                           ),
-                        ),
-                        // Duration badge with glassy effect
+                          // Duration badge with glassy effect
               if (data['duration'] != null)
                 Positioned(
-                            bottom: 10,
-                            right: 10,
+                              bottom: 10,
+                              right: 10,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                  horizontal: 8,
+                                  vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.8),
-                                    Colors.black.withValues(alpha: 0.6),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  width: 0.5,
-                                ),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.black.withValues(alpha: 0.8),
+                                      Colors.black.withValues(alpha: 0.6),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    width: 0.5,
+                                  ),
                     ),
                     child: Text(
                       _formatDuration(data['duration']),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -708,7 +855,7 @@ class _VideoCardState extends State<VideoCard> with SingleTickerProviderStateMix
           ),
         );
       },
-    );
+    ));
   }
 
   void _showBottomSheet(BuildContext context, QueryDocumentSnapshot video, Map<String, dynamic> data) {
