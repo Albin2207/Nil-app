@@ -6,18 +6,18 @@ import 'package:share_plus/share_plus.dart';
 import '../screens/image_viewer_screen.dart';
 import '../screens/creator_profile_screen.dart';
 import '../providers/image_post_provider.dart';
+import '../../core/services/content_preferences_service.dart';
+import '../../core/utils/snackbar_helper.dart';
 import 'image_comments_bottom_sheet.dart';
 
 class ImagePostCard extends StatefulWidget {
   final QueryDocumentSnapshot imagePost;
   final VoidCallback? onMarkNotInterested;
-  final VoidCallback? onBlockChannel;
 
   const ImagePostCard({
     super.key,
     required this.imagePost,
     this.onMarkNotInterested,
-    this.onBlockChannel,
   });
 
   @override
@@ -161,7 +161,14 @@ class _ImagePostCardState extends State<ImagePostCard>
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.share, color: Colors.white),
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.share_outlined, size: 18, color: Colors.red),
+              ),
               title: const Text(
                 'Share',
                 style: TextStyle(color: Colors.white),
@@ -172,25 +179,42 @@ class _ImagePostCardState extends State<ImagePostCard>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.thumb_down, color: Colors.white),
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.not_interested_outlined, size: 18, color: Colors.red),
+              ),
               title: const Text(
                 'Not Interested',
                 style: TextStyle(color: Colors.white),
               ),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+                
+                // Call parent callback to handle local state
                 widget.onMarkNotInterested?.call();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.block, color: Colors.red),
-              title: const Text(
-                'Block Channel',
-                style: TextStyle(color: Colors.red),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                widget.onBlockChannel?.call();
+                
+                // Show success message
+                if (context.mounted) {
+                  SnackBarHelper.showSuccess(
+                    context, 
+                    'Image post marked as not interested', 
+                    icon: Icons.not_interested
+                  );
+                }
+                
+                // Save to Firestore in background
+                final success = await ContentPreferencesService.markImagePostNotInterested(widget.imagePost.id);
+                if (!success && context.mounted) {
+                  SnackBarHelper.showError(
+                    context, 
+                    'Failed to save preference', 
+                    icon: Icons.error
+                  );
+                }
               },
             ),
             const SizedBox(height: 20),

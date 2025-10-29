@@ -5,13 +5,15 @@ import '../widgets/image_post_card.dart';
 
 class MixedFeedWidget extends StatefulWidget {
   final Set<String> notInterestedVideos;
+  final Set<String> notInterestedImagePosts;
   final Set<String> blockedChannels;
-  final Function(String) onMarkNotInterested;
+  final Function(String, String) onMarkNotInterested; // (contentId, contentType)
   final Function(String) onBlockChannel;
 
   const MixedFeedWidget({
     super.key,
     required this.notInterestedVideos,
+    required this.notInterestedImagePosts,
     required this.blockedChannels,
     required this.onMarkNotInterested,
     required this.onBlockChannel,
@@ -138,9 +140,17 @@ class _MixedFeedWidgetState extends State<MixedFeedWidget> {
     final docId = doc.id;
     final uploadedBy = data['uploadedBy'] ?? '';
     
-    // Filter out not interested content
-    if (widget.notInterestedVideos.contains(docId)) {
-      return false;
+    // Filter out not interested content based on type
+    if (data['type'] == 'image_post') {
+      // For image posts, check notInterestedImagePosts
+      if (widget.notInterestedImagePosts.contains(docId)) {
+        return false;
+      }
+    } else {
+      // For videos, check notInterestedVideos
+      if (widget.notInterestedVideos.contains(docId)) {
+        return false;
+      }
     }
     
     // Filter out content from blocked channels
@@ -207,13 +217,12 @@ class _MixedFeedWidgetState extends State<MixedFeedWidget> {
         if (data['type'] == 'image_post') {
           return ImagePostCard(
             imagePost: doc,
-            onMarkNotInterested: () => widget.onMarkNotInterested(doc.id),
-            onBlockChannel: () => widget.onBlockChannel(data['uploadedBy'] ?? ''),
+            onMarkNotInterested: () => widget.onMarkNotInterested(doc.id, 'image_post'),
           );
         } else {
           return VideoCard(
             video: doc,
-            onMarkNotInterested: (videoId) => widget.onMarkNotInterested(videoId),
+            onMarkNotInterested: (videoId) => widget.onMarkNotInterested(videoId, 'video'),
             onBlockChannel: (channelId) => widget.onBlockChannel(channelId),
           );
         }

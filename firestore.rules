@@ -152,6 +152,15 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
+    match /users/{userId}/notInterestedImagePosts/{imagePostId} {
+      // Users can only read their own not interested image posts list
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Users can only create their own not interested image post entries
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can only delete their own not interested image post entries
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Notifications collection (global)
     match /notifications/{notificationId} {
       // Anyone can read notifications

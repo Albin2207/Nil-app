@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final Set<String> _localNotInterested = {};
+  final Set<String> _localNotInterestedImagePosts = {};
   final Set<String> _localBlockedChannels = {};
 
   @override
@@ -292,20 +293,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, Set<String>>>(
-        future: Future.wait([
-          ContentPreferencesService.getNotInterestedVideos(),
-          ContentPreferencesService.getBlockedChannels(),
-        ]).then((results) => {
-          'notInterested': results[0],
-          'blockedChannels': results[1],
-        }),
+      body: StreamBuilder<Map<String, Set<String>>>(
+        stream: ContentPreferencesService.getUserPreferencesStream(),
         builder: (context, prefsSnapshot) {
           if (!prefsSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator(color: Colors.red));
           }
 
           final notInterestedVideos = prefsSnapshot.data!['notInterested']!;
+          final notInterestedImagePosts = prefsSnapshot.data!['notInterestedImagePosts']!;
           final blockedChannels = prefsSnapshot.data!['blockedChannels']!;
 
           return MixedFeedWidget(
@@ -313,13 +309,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ...notInterestedVideos,
               ..._localNotInterested,
             },
+            notInterestedImagePosts: {
+              ...notInterestedImagePosts,
+              ..._localNotInterestedImagePosts,
+            },
             blockedChannels: {
               ...blockedChannels,
               ..._localBlockedChannels,
             },
-            onMarkNotInterested: (contentId) {
+            onMarkNotInterested: (contentId, contentType) {
               setState(() {
-                _localNotInterested.add(contentId);
+                if (contentType == 'image_post') {
+                  _localNotInterestedImagePosts.add(contentId);
+                } else {
+                  _localNotInterested.add(contentId);
+                }
               });
             },
             onBlockChannel: (channelId) {
